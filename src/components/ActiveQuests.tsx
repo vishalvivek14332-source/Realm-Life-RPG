@@ -183,17 +183,20 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
                   </span>
                 </div>
 
-                {/* Continue Action Button */}
+                {/* Continue / Claimed Action Button */}
                 <button
                   id={`continue-quest-${quest.id}`}
+                  disabled={isCompleted}
                   onClick={() => {
-                    onContinueQuest(quest.id);
+                    if (!isCompleted) {
+                      onContinueQuest(quest.id);
+                    }
                   }}
                   className={`
                     px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 shrink-0
                     ${isCompleted 
-                      ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/50 hover:bg-emerald-800' 
-                      : style.btnBg}
+                      ? 'bg-emerald-950/40 text-emerald-400/80 border-emerald-600/30 cursor-default opacity-85 select-none pointer-events-none' 
+                      : `${style.btnBg} cursor-pointer hover:scale-105 active:scale-95`}
                   `}
                 >
                   {isCompleted ? (

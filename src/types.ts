@@ -45,11 +45,16 @@ export interface RecentActivityItem {
 export interface InventoryItem {
   id: string;
   name: string;
-  rarity: 'Common' | 'Rare' | 'Epic' | 'Legendary';
+  rarity: 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
   type: 'potion' | 'equipment' | 'relic';
+  category?: 'boosts' | 'consumables' | 'special' | 'trophies';
   description: string;
   bonus: string;
+  passiveEffect?: string;
+  quote?: string;
+  sellPrice?: number;
   icon: string;
+  image?: string;
   quantity: number;
   equipped?: boolean;
 }
@@ -59,12 +64,17 @@ export interface Achievement {
   title: string;
   description: string;
   xpReward: number;
+  goldReward: number;
+  status: 'completed' | 'in_progress' | 'locked';
   icon: string;
+  image?: string;
   category: string;
   unlocked: boolean;
   dateUnlocked?: string;
   progress: number;
   maxProgress: number;
+  quote?: string;
+  rarity?: 'Common' | 'Rare' | 'Epic' | 'Legendary';
 }
 
 export interface CharacterProfile {

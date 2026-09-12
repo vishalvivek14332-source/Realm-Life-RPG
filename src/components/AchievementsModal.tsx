@@ -2,6 +2,8 @@ import React from 'react';
 import { X, Trophy, CheckCircle, Lock, Award, Star } from 'lucide-react';
 import { Achievement } from '../types';
 import { soundFx } from '../sound';
+import { ACHIEVEMENT_ARTWORKS } from './AchievementsView';
+import achieveConsistentMind from '../assets/images/achieve_consistent_mind.jpg';
 
 interface AchievementsModalProps {
   isOpen: boolean;
@@ -49,6 +51,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
         <div className="mt-5 space-y-3">
           {achievements.map((ach) => {
             const percent = Math.min(100, Math.round((ach.progress / ach.maxProgress) * 100));
+            const artwork = ach.image || ACHIEVEMENT_ARTWORKS[ach.id] || achieveConsistentMind;
 
             return (
               <div
@@ -60,14 +63,19 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
                     : 'bg-[#100c05] border-white/5 opacity-75'}
                 `}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`
-                    w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border
-                    ${ach.unlocked 
-                      ? 'bg-amber-950/80 border-amber-400/60 text-amber-300' 
-                      : 'bg-black/50 border-slate-700 text-slate-500'}
-                  `}>
-                    {ach.unlocked ? <Trophy className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* Picture thumbnail */}
+                  <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-amber-500/40 bg-black/60 relative shadow-md">
+                    <img 
+                      src={artwork} 
+                      alt={ach.title}
+                      className={`w-full h-full object-cover ${ach.unlocked ? 'saturate-125' : 'grayscale brightness-60'}`}
+                    />
+                    {!ach.unlocked && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-slate-300">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="min-w-0">

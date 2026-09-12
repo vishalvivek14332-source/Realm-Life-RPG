@@ -14,6 +14,7 @@ import shadowAvatar from '../assets/images/shadow_avatar_1789200543671.jpg';
 
 interface TopHeaderProps {
   profile: CharacterProfile;
+  currentTab?: string;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   soundEnabled: boolean;
@@ -21,17 +22,20 @@ interface TopHeaderProps {
   setMobileOpen: (open: boolean) => void;
   onProfileClick: () => void;
   onNotificationsClick: () => void;
+  onSettingsClick?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
   profile,
+  currentTab,
   searchQuery,
   setSearchQuery,
   soundEnabled,
   setSoundEnabled,
   setMobileOpen,
   onProfileClick,
-  onNotificationsClick
+  onNotificationsClick,
+  onSettingsClick
 }) => {
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -56,10 +60,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Left Quotation: “SAME PERSON. HIGHER STANDARDS.” */}
+          {/* Left Quotation */}
           <div className="hidden sm:flex items-center gap-2 text-xs text-slate-300 font-serif tracking-wider">
             <span className="text-purple-400 font-mono text-sm">→</span>
-            <span className="font-semibold text-slate-200 uppercase tracking-widest text-[11px]">“SAME PERSON. HIGHER STANDARDS.”</span>
+            <span className="font-semibold text-slate-200 uppercase tracking-widest text-[11px]">
+              {currentTab === 'settings'
+                ? '“DISCIPLINE TODAY. A BRIGHTER TOMORROW.”'
+                : currentTab === 'achievements'
+                ? '“MILESTONES TODAY. A LEGENDARY TOMORROW.”'
+                : currentTab === 'inventory' 
+                ? '“ITEMS TODAY. A STRONGER YOU TOMORROW.”' 
+                : '“SAME PERSON. HIGHER STANDARDS.”'}
+            </span>
+            <span className="text-purple-400 font-mono text-sm">⇄</span>
           </div>
         </div>
 
@@ -86,139 +99,157 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Right Badges & Controls */}
         <div className="flex flex-col items-end">
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Gold Coin Badge */}
-          <div 
-            id="header-gold-badge"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-950/60 to-[#221706]/80 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)] cursor-default transition-transform hover:scale-105"
-            title="Your Current Gold"
-          >
-            <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 flex items-center justify-center shadow-[0_0_6px_rgba(251,191,36,0.8)] border border-amber-300/60">
-              <span className="text-[11px] font-black text-amber-950">★</span>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xs sm:text-sm font-extrabold text-amber-300 font-sans tracking-tight">
-                {profile.gold.toLocaleString()}
-              </span>
-              <span className="text-[10px] text-amber-400/80 font-medium hidden sm:inline">Gold</span>
-            </div>
-          </div>
-
-          {/* XP Gem Badge */}
-          <div 
-            id="header-xp-badge"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-950/60 to-[#1f0a2e]/80 border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.3)] cursor-default transition-transform hover:scale-105"
-            title="Total Experience"
-          >
-            <div className="w-5 h-5 flex items-center justify-center text-purple-300">
-              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-purple-400 drop-shadow-[0_0_6px_rgba(192,132,252,0.8)]">
-                <polygon points="12,2 22,8.5 12,22 2,8.5" />
-              </svg>
-            </div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-xs sm:text-sm font-extrabold text-purple-200 font-sans tracking-tight">
-                {profile.totalXP.toLocaleString()}
-              </span>
-              <span className="text-[10px] text-purple-300/80 font-medium hidden sm:inline">XP</span>
-            </div>
-          </div>
-
-          {/* Streak Flame Badge */}
-          <div 
-            id="header-streak-badge"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-950/60 to-[#270e06]/80 border border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.3)] cursor-default transition-transform hover:scale-105"
-            title="Consecutive Day Streak"
-          >
-            <Flame className="w-4 h-4 text-orange-400 fill-orange-500 drop-shadow-[0_0_8px_rgba(251,146,60,0.9)] animate-pulse" />
-            <div className="flex items-baseline gap-1">
-              <span className="text-xs sm:text-sm font-black text-orange-300 tracking-tight">
-                {profile.streakDays}
-              </span>
-              <span className="text-[10px] text-orange-300/80 font-medium hidden md:inline">Day Streak</span>
-            </div>
-          </div>
-
-          {/* User Profile Pill */}
-          <button 
-            id="header-profile-button"
-            onClick={() => {
-              soundFx.playClick();
-              onProfileClick();
-            }}
-            className="flex items-center gap-2.5 pl-1.5 pr-3.5 py-1 rounded-full bg-[#111329]/90 border border-purple-800/50 hover:border-purple-400/80 transition-all group"
-          >
-            {/* Avatar with online pip */}
-            <div className="relative">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-purple-400/60 bg-gradient-to-tr from-purple-950 to-indigo-900 flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                <img
-                  src={shadowAvatar}
-                  alt={profile.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                />
+            <div 
+              id="header-gold-badge"
+              className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#140f06]/90 border border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.2)] cursor-default transition-transform hover:scale-105"
+              title="Your Current Gold"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 flex items-center justify-center shadow-[0_0_8px_rgba(251,191,36,0.8)] border border-amber-300/80">
+                <span className="text-[12px] font-black text-amber-950">★</span>
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#080916] shadow-[0_0_6px_#34d399]" />
-            </div>
-
-            <div className="text-left hidden sm:block">
-              <div className="text-xs font-black text-slate-100 font-cinzel tracking-wider group-hover:text-purple-300 transition-colors">
-                {profile.name}
-              </div>
-              <div className="text-[10px] font-semibold text-purple-400">
-                Lv. {profile.level}
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-black text-amber-300 font-sans">
+                  {profile.gold.toLocaleString()}
+                </span>
+                <span className="text-[9px] text-amber-400/80 font-medium">Gold</span>
               </div>
             </div>
-          </button>
 
-          {/* Notifications Bell */}
-          <button 
-            id="header-notifications-button"
-            onClick={() => {
-              soundFx.playClick();
-              onNotificationsClick();
-            }}
-            className="relative p-2 text-slate-400 hover:text-purple-300 bg-[#12142d]/80 hover:bg-purple-950/50 rounded-full border border-purple-900/30 transition-all"
-            aria-label="View notifications"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" />
-          </button>
+            {/* XP Gem Badge */}
+            <div 
+              id="header-xp-badge"
+              className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#170926]/90 border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.25)] cursor-default transition-transform hover:scale-105"
+              title="Current Experience"
+            >
+              <div className="w-6 h-6 rounded-lg bg-purple-900/60 border border-purple-400/60 flex items-center justify-center text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.6)]">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-purple-300 drop-shadow-[0_0_6px_rgba(192,132,252,0.8)]">
+                  <polygon points="12,2 22,8.5 12,22 2,8.5" />
+                </svg>
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-black text-purple-200 font-sans">
+                  {profile.currentXP.toLocaleString()}
+                </span>
+                <span className="text-[9px] text-purple-300/80 font-medium">XP</span>
+              </div>
+            </div>
 
-          {/* Settings Gear */}
-          <button 
-            id="header-settings-button"
-            onClick={() => {
-              soundFx.playClick();
-              onNotificationsClick();
-            }}
-            className="p-2 text-slate-400 hover:text-purple-300 bg-[#12142d]/80 hover:bg-purple-950/50 rounded-full border border-purple-900/30 transition-all"
-            aria-label="Open Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+            {/* Streak Flame Badge */}
+            <div 
+              id="header-streak-badge"
+              className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#230c05]/90 border border-orange-500/50 shadow-[0_0_12px_rgba(249,115,22,0.25)] cursor-default transition-transform hover:scale-105"
+              title="Consecutive Day Streak"
+            >
+              <div className="w-6 h-6 rounded-lg bg-orange-950/70 border border-orange-500/50 flex items-center justify-center shadow-[0_0_8px_rgba(249,115,22,0.6)]">
+                <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-500 animate-pulse" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs font-black text-orange-300 font-sans">
+                  {profile.streakDays}
+                </span>
+                <span className="text-[9px] text-orange-300/80 font-medium">Day Streak</span>
+              </div>
+            </div>
 
-          {/* Sound Toggle */}
-          <button 
-            id="header-sound-toggle"
-            onClick={toggleSound}
-            className={`p-2 rounded-full border transition-all ${
-              soundEnabled 
-                ? 'text-purple-300 bg-[#12142d]/80 border-purple-800/40 hover:border-purple-500/60 shadow-[0_0_8px_rgba(168,85,247,0.2)]' 
-                : 'text-slate-500 bg-[#0d0e1f]/60 border-slate-800 hover:text-slate-300'
-            }`}
-            title={soundEnabled ? 'Mute sound effects' : 'Unmute sound effects'}
-            aria-label="Toggle sound effects"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-        </div>
+            {/* Sound Toggle Button */}
+            <button
+              id="header-audio-toggle"
+              onClick={toggleSound}
+              className="p-2 text-slate-300 hover:text-white bg-[#100824]/90 hover:bg-purple-950/60 rounded-xl border border-purple-900/50 hover:border-purple-500/60 transition-all cursor-pointer shadow-md"
+              title={soundEnabled ? 'Audio FX Enabled (Click to Mute)' : 'Audio FX Muted (Click to Unmute)'}
+            >
+              {soundEnabled ? (
+                <Volume2 className="w-4 h-4 text-purple-300" />
+              ) : (
+                <VolumeX className="w-4 h-4 text-slate-500" />
+              )}
+            </button>
 
-        {/* Sub-quote on right under badges: “A BETTER YOU A BRIGHTER TOMORROW.” */}
-        <div className="hidden xl:block text-[10px] font-serif italic text-cyan-300/80 tracking-widest uppercase mt-1 mr-1 text-right">
-          “A BETTER YOU • A BRIGHTER TOMORROW.”
+            {/* User Profile Pill */}
+            <button 
+              id="header-profile-button"
+              onClick={() => {
+                soundFx.playClick();
+                onProfileClick();
+              }}
+              className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#110b24]/90 border border-purple-500/50 hover:border-purple-400 transition-all group cursor-pointer shadow-md"
+              title="View Character Profile"
+            >
+              <div className="relative">
+                <div className="w-7 h-7 rounded-full overflow-hidden border border-purple-400/80 bg-purple-950 flex items-center justify-center shadow-[0_0_8px_rgba(168,85,247,0.6)]">
+                  <img
+                    src={shadowAvatar}
+                    alt={profile.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                </div>
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 ring-1 ring-[#080916] shadow-[0_0_4px_#34d399]" />
+              </div>
+
+              <div className="text-left hidden sm:block leading-tight">
+                <div className="text-xs font-black text-white font-cinzel tracking-wider group-hover:text-purple-300 transition-colors">
+                  {profile.name}
+                </div>
+                <div className="text-[9px] font-semibold text-purple-300">
+                  Lv. {profile.level}
+                </div>
+              </div>
+            </button>
+
+            {/* Notifications Bell */}
+            <button 
+              id="header-notifications-button"
+              onClick={() => {
+                soundFx.playClick();
+                onNotificationsClick();
+              }}
+              className="relative p-2 text-slate-300 hover:text-white bg-[#100824]/90 hover:bg-purple-950/60 rounded-xl border border-purple-900/50 hover:border-purple-500/60 transition-all cursor-pointer shadow-md"
+              aria-label="View notifications"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute 1 top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-amber-400 rounded-full" />
+            </button>
+
+            {/* Settings Gear */}
+            <button 
+              id="header-settings-button"
+              onClick={() => {
+                soundFx.playClick();
+                if (onSettingsClick) {
+                  onSettingsClick();
+                } else {
+                  onNotificationsClick();
+                }
+              }}
+              className="p-2 text-slate-300 hover:text-white bg-[#100824]/90 hover:bg-purple-950/60 rounded-xl border border-purple-900/50 hover:border-purple-500/60 transition-all cursor-pointer shadow-md"
+              aria-label="Open Settings"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Sub-quote on right under badges: “SAME PERSON. HIGHER STANDARDS.” */}
+          <div className="hidden lg:block text-[9px] font-serif tracking-widest text-slate-300/90 uppercase pt-1 text-right leading-tight">
+            {currentTab === 'achievements' || currentTab === 'settings' ? (
+              <>
+                <div className="text-slate-200 font-bold tracking-widest">SAME PERSON.</div>
+                <div className="text-slate-400">HIGHER STANDARDS.</div>
+              </>
+            ) : (
+              <>
+                <div>A BETTER YOU</div>
+                <div className="text-slate-400">A BRIGHTER TOMORROW.</div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  </header>
+    </header>
   );
 };

@@ -28,25 +28,44 @@ import {
 import { soundFx } from '../sound';
 import heroShadowBanner from '../assets/images/hero_shadow_banner_1789201471184.jpg';
 import promoCliffImg from '../assets/images/promo_cliff_1789201593655.jpg';
+import realmFantasyBg from '../assets/images/realm_fantasy_bg_1789200503712.jpg';
 import itemCloakImg from '../assets/images/item_mindful_cloak_1789202806025.jpg';
 import itemBladeImg from '../assets/images/item_trackers_blade_1789202830581.jpg';
 import itemJournalImg from '../assets/images/item_explorers_journal_1789202848219.jpg';
+import itemRingImg from '../assets/images/item_pathfinders_ring.jpg';
 import avatarImg from '../assets/images/shadow_avatar_1789200543671.jpg';
+import { CharacterProfile, AttributeStat, InventoryItem, Quest, Achievement } from '../types';
 
 interface CharacterViewProps {
+  profile: CharacterProfile;
+  setProfile?: React.Dispatch<React.SetStateAction<CharacterProfile>>;
+  attributes: AttributeStat[];
+  setAttributes?: React.Dispatch<React.SetStateAction<AttributeStat[]>>;
+  inventory: InventoryItem[];
+  setInventory?: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
+  quests: Quest[];
+  achievements: Achievement[];
   showToast: (message: string) => void;
   onOpenInventory: () => void;
   onOpenAchievements: () => void;
 }
 
 export const CharacterView: React.FC<CharacterViewProps> = ({
+  profile,
+  setProfile,
+  attributes,
+  setAttributes,
+  inventory,
+  setInventory,
+  quests,
+  achievements,
   showToast,
   onOpenInventory,
   onOpenAchievements
 }) => {
   // Character states
-  const [characterName, setCharacterName] = useState('SHADOW');
-  const [currentTitle, setCurrentTitle] = useState('Pathfinder');
+  const [characterName, setCharacterName] = useState(profile.name);
+  const [currentTitle, setCurrentTitle] = useState(profile.title);
   const [currentQuote, setCurrentQuote] = useState('“Discipline today, results tomorrow.”');
   
   // Modals
@@ -66,9 +85,29 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
     { id: 'pathfinder', name: 'Pathfinder', desc: 'Exploring a better version of yourself.', unlocked: true, rarity: 'Epic' },
     { id: 'wanderer', name: 'Novice Wanderer', desc: 'Every grand expedition begins with a single step.', unlocked: true, rarity: 'Common' },
     { id: 'disciplined', name: 'Disciplined Hunter', desc: 'Forged in the fires of unbroken consistency.', unlocked: true, rarity: 'Rare' },
-    { id: 'trailblazer', name: 'Trailblazer', desc: 'Unlocks at Level 20. Forge unexplored paths.', unlocked: false, rarity: 'Epic' },
-    { id: 'shadow_master', name: 'Grandmaster of Wills', desc: 'Unlocks at Level 50. Master of mind and spirit.', unlocked: false, rarity: 'Legendary' },
+    { id: 'trailblazer', name: 'Trailblazer', desc: 'Unlocks at Level 20. Forge unexplored paths.', unlocked: profile.level >= 20, rarity: 'Epic' },
+    { id: 'shadow_master', name: 'Grandmaster of Wills', desc: 'Unlocks at Level 50. Master of mind and spirit.', unlocked: profile.level >= 50, rarity: 'Legendary' },
   ];
+
+  const xpNeeded = Math.max(0, profile.maxXP - profile.currentXP);
+  const xpPercent = Math.min(100, Math.round((profile.currentXP / profile.maxXP) * 100));
+  const completedQuestsCount = quests.filter(q => q.completed).length;
+  const unlockedAchievementsCount = achievements.filter(a => a.unlocked).length;
+
+  // Train attribute function
+  const handleTrainAttribute = (attrId: string) => {
+    soundFx.playLevelUp();
+    if (setAttributes) {
+      setAttributes(prev => prev.map(a => {
+        if (a.id === attrId) {
+          return { ...a, current: Math.min(a.max, a.current + 1) };
+        }
+        return a;
+      }));
+    }
+    const target = attributes.find(a => a.id === attrId);
+    showToast(`Mastery Focus: Raised ${target?.name || attrId} to ${(target?.current || 0) + 1}!`);
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -80,97 +119,108 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
         <div className="lg:col-span-8 space-y-6">
 
           {/* A. Hero Banner Card */}
-          <div className="relative rounded-2xl overflow-hidden border border-purple-500/50 bg-[#0b061c] shadow-[0_4px_30px_rgba(0,0,0,0.8)] min-h-[290px] sm:min-h-[320px] flex flex-col justify-between p-5 sm:p-7">
+          <div className="relative rounded-2xl overflow-hidden border border-purple-500/50 bg-[#0b061c] shadow-[0_4px_30px_rgba(0,0,0,0.8)] min-h-[300px] sm:min-h-[330px] flex flex-col justify-between p-5 sm:p-7">
             {/* Background Artwork: Twilight floating spires with Shadow Hunter overlooking realm */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <img
                 src={heroShadowBanner}
                 alt="Shadow Character"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-[center_35%] filter saturate-125 opacity-85"
+                className="w-full h-full object-cover object-[left_35%] filter saturate-125 opacity-90"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#080415] via-[#080415]/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#080415]/60 to-[#080415]/95" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#080415] via-transparent to-[#080415]/40" />
             </div>
 
-            {/* Top Identity Block: Name + Badges + Quote */}
-            <div className="relative z-10 max-w-xl space-y-2">
-              <h1 className="font-cinzel text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-wider drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
-                {characterName}
-              </h1>
-
-              {/* Badges: Lv. 12 & Pathfinder */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-1">
-                {/* Level Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/80 border border-amber-500/70 text-amber-300 font-bold text-xs shadow-[0_0_12px_rgba(245,158,11,0.3)]">
-                  <span className="text-amber-400">✦</span>
-                  <span>Lv. 12</span>
-                </div>
-
-                {/* Title Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-950/80 border border-purple-500/70 text-purple-200 font-bold text-xs shadow-[0_0_12px_rgba(168,85,247,0.3)]">
-                  <Compass className="w-3.5 h-3.5 text-purple-400" />
-                  <span>{currentTitle}</span>
-                </div>
+            {/* Top Left Quote with Pointer Arrow */}
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300/90 font-serif tracking-wider">
+                <span className="text-slate-400">↳</span>
+                <span className="tracking-wide">“SAME PERSON. HIGHER STANDARDS.”</span>
               </div>
-
-              {/* Quote */}
-              <p className="font-serif italic text-xs sm:text-sm text-slate-200 tracking-wide pt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                {currentQuote}
-              </p>
             </div>
 
-            {/* Bottom Progress Bar & Action Buttons */}
-            <div className="relative z-10 pt-6 space-y-4">
-              {/* Level Progress Bar */}
-              <div className="space-y-1.5 max-w-xl">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-cyan-300 tracking-wide drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
-                    2,450 / 3,000 XP
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-600/60 text-purple-200 text-[11px]">
-                    Lv. 13
-                  </span>
-                </div>
+            {/* Right-Aligned Character Content Area */}
+            <div className="relative z-10 sm:ml-auto sm:max-w-md lg:max-w-lg space-y-4 pt-4">
+              {/* Top Identity Block: Name + Badges + Quote */}
+              <div className="space-y-2">
+                <h1 className="font-cinzel text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-wider drop-shadow-[0_4px_16px_rgba(0,0,0,0.95)]">
+                  {profile.name || characterName}
+                </h1>
 
-                {/* Custom Progress Bar with Glowing Cyan Head */}
-                <div className="relative h-3 rounded-full bg-slate-950/80 border border-purple-900/60 overflow-hidden p-0.5 shadow-inner">
-                  <div 
-                    className="h-full rounded-full bg-gradient-to-r from-purple-600 via-indigo-500 to-cyan-400 shadow-[0_0_14px_rgba(6,182,212,0.8)] relative"
-                    style={{ width: `${(2450 / 3000) * 100}%` }}
-                  >
-                    <div className="absolute right-0 top-0 bottom-0 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_10px_rgba(255,255,255,1)]" />
+                {/* Badges: Lv. & Title */}
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  {/* Level Badge */}
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-950/80 border border-amber-500/70 text-amber-300 font-bold text-xs shadow-[0_0_12px_rgba(245,158,11,0.3)]">
+                    <span className="text-amber-400">✦</span>
+                    <span>Lv. {profile.level}</span>
+                  </div>
+
+                  {/* Title Badge */}
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-950/80 border border-purple-500/70 text-purple-200 font-bold text-xs shadow-[0_0_12px_rgba(168,85,247,0.3)]">
+                    <Compass className="w-3.5 h-3.5 text-purple-400" />
+                    <span>{profile.title || currentTitle}</span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-slate-300 font-medium tracking-wide">
-                  550 XP to next level
+                {/* Quote */}
+                <p className="font-serif italic text-xs sm:text-sm text-slate-200 tracking-wide pt-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                  {currentQuote}
                 </p>
               </div>
 
-              {/* Action Buttons: Edit Avatar & Change Title */}
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setIsEditAvatarOpen(true);
-                  }}
-                  className="px-4 py-1.5 rounded-xl bg-[#140b2a]/90 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 text-xs font-bold text-slate-100 hover:text-white transition-all duration-200 shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5 text-purple-300" />
-                  <span>Edit Avatar</span>
-                </button>
+              {/* Progress Bar & Action Buttons */}
+              <div className="space-y-4 pt-1">
+                {/* Level Progress Bar */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-cyan-300 tracking-wide drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]">
+                      {profile.currentXP.toLocaleString()} / {profile.maxXP.toLocaleString()} XP
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-600/60 text-purple-200 text-[11px]">
+                      Lv. {profile.level + 1}
+                    </span>
+                  </div>
 
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setIsChangeTitleOpen(true);
-                  }}
-                  className="px-4 py-1.5 rounded-xl bg-[#140b2a]/90 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 text-xs font-bold text-slate-100 hover:text-white transition-all duration-200 shadow-md flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Compass className="w-3.5 h-3.5 text-purple-300" />
-                  <span>Change Title</span>
-                </button>
+                  {/* Custom Progress Bar with Glowing Cyan Head */}
+                  <div className="relative h-3 rounded-full bg-slate-950/80 border border-purple-900/60 overflow-hidden p-0.5 shadow-inner">
+                    <div 
+                      className="h-full rounded-full bg-gradient-to-r from-purple-600 via-indigo-500 to-cyan-400 shadow-[0_0_14px_rgba(6,182,212,0.8)] relative"
+                      style={{ width: `${xpPercent}%` }}
+                    >
+                      <div className="absolute right-0 top-0 bottom-0 w-2.5 rounded-full bg-cyan-200 shadow-[0_0_10px_rgba(255,255,255,1)]" />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 font-medium tracking-wide">
+                    {xpNeeded > 0 ? `${xpNeeded.toLocaleString()} XP to next level` : 'Ready to level up!'}
+                  </p>
+                </div>
+
+                {/* Action Buttons: Edit Avatar & Change Title */}
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    onClick={() => {
+                      soundFx.playClick();
+                      setIsEditAvatarOpen(true);
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-[#140b2a]/90 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 text-xs font-bold text-slate-100 hover:text-white transition-all duration-200 shadow-md flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-purple-300" />
+                    <span>Edit Avatar</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      soundFx.playClick();
+                      setIsChangeTitleOpen(true);
+                    }}
+                    className="px-4 py-1.5 rounded-xl bg-[#140b2a]/90 hover:bg-purple-900/80 border border-purple-500/50 hover:border-purple-400 text-xs font-bold text-slate-100 hover:text-white transition-all duration-200 shadow-md flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-purple-300" />
+                    <span>Change Title</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -202,128 +252,56 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
 
             {/* 5 Attribute Cards Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {/* 1. STRENGTH */}
-              <div className="rounded-2xl p-3.5 bg-gradient-to-b from-[#180a14]/90 to-[#0c0409]/95 border border-rose-600/40 shadow-[0_0_15px_rgba(244,63,94,0.15)] flex flex-col justify-between hover:border-rose-500 transition-all group">
-                <div className="flex flex-col items-center text-center">
-                  {/* Icon */}
-                  <div className="w-10 h-10 rounded-xl bg-rose-950/70 border border-rose-500/50 flex items-center justify-center text-rose-400 mb-2 shadow-[0_0_10px_rgba(244,63,94,0.4)] group-hover:scale-110 transition-transform">
-                    <Dumbbell className="w-5 h-5" />
-                  </div>
-                  <span className="font-cinzel text-xs font-black text-rose-400 tracking-wider">
-                    STRENGTH
-                  </span>
-                  <div className="text-sm font-black text-white font-sans mt-0.5">
-                    18 <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </div>
-                  {/* Progress Bar */}
-                  <div className="w-full h-1.5 rounded-full bg-slate-900 border border-rose-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-rose-500" style={{ width: '18%' }} />
-                  </div>
-                </div>
+              {attributes.map((attr) => {
+                const percent = Math.min(100, Math.round((attr.current / attr.max) * 100));
+                const colorConfig: Record<string, { border: string; glow: string; text: string; bar: string; iconBg: string }> = {
+                  strength: { border: 'border-rose-600/40 hover:border-rose-500', glow: 'shadow-[0_0_15px_rgba(244,63,94,0.15)]', text: 'text-rose-400', bar: 'bg-rose-500', iconBg: 'bg-rose-950/70 border-rose-500/50 text-rose-400' },
+                  intellect: { border: 'border-cyan-500/40 hover:border-cyan-400', glow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', text: 'text-cyan-400', bar: 'bg-cyan-400', iconBg: 'bg-cyan-950/70 border-cyan-500/50 text-cyan-400' },
+                  wisdom: { border: 'border-purple-500/40 hover:border-purple-400', glow: 'shadow-[0_0_15px_rgba(168,85,247,0.15)]', text: 'text-purple-300', bar: 'bg-purple-500', iconBg: 'bg-purple-950/70 border-purple-500/50 text-purple-300' },
+                  discipline: { border: 'border-amber-500/40 hover:border-amber-400', glow: 'shadow-[0_0_15px_rgba(245,158,11,0.15)]', text: 'text-amber-300', bar: 'bg-amber-400', iconBg: 'bg-amber-950/70 border-amber-500/50 text-amber-300' },
+                  vitality: { border: 'border-emerald-500/40 hover:border-emerald-400', glow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]', text: 'text-emerald-400', bar: 'bg-emerald-400', iconBg: 'bg-emerald-950/70 border-emerald-500/50 text-emerald-400' }
+                };
+                const theme = colorConfig[attr.id] || colorConfig.discipline;
 
-                {/* Sub-skills */}
-                <div className="mt-3 pt-2.5 border-t border-rose-950/60 space-y-1 text-[11px] text-slate-300">
-                  <p className="hover:text-white transition-colors">+ Gym</p>
-                  <p className="hover:text-white transition-colors">+ Calisthenics</p>
-                  <p className="hover:text-white transition-colors">+ Heavy Training</p>
-                </div>
-              </div>
+                return (
+                  <div key={attr.id} className={`rounded-2xl p-3.5 bg-gradient-to-b from-[#120822]/90 to-[#06030e]/95 border ${theme.border} ${theme.glow} flex flex-col justify-between transition-all group`}>
+                    <div className="flex flex-col items-center text-center">
+                      <div className={`w-10 h-10 rounded-xl ${theme.iconBg} border flex items-center justify-center mb-2 shadow-md group-hover:scale-110 transition-transform`}>
+                        {attr.id === 'strength' && <Dumbbell className="w-5 h-5" />}
+                        {attr.id === 'intellect' && <Brain className="w-5 h-5" />}
+                        {attr.id === 'wisdom' && <Eye className="w-5 h-5" />}
+                        {attr.id === 'discipline' && <Star className="w-5 h-5 fill-amber-400" />}
+                        {attr.id === 'vitality' && <Leaf className="w-5 h-5" />}
+                      </div>
+                      <span className={`font-cinzel text-xs font-black ${theme.text} tracking-wider`}>
+                        {attr.name}
+                      </span>
+                      <div className="text-sm font-black text-white font-sans mt-0.5">
+                        {attr.current} <span className="text-xs font-normal text-slate-400">/ {attr.max}</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-900 border border-white/5 mt-1.5 overflow-hidden">
+                        <div className={`h-full rounded-full ${theme.bar}`} style={{ width: `${percent}%` }} />
+                      </div>
+                    </div>
 
-              {/* 2. INTELLECT */}
-              <div className="rounded-2xl p-3.5 bg-gradient-to-b from-[#091524]/90 to-[#040a12]/95 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.15)] flex flex-col justify-between hover:border-cyan-400 transition-all group">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-950/70 border border-cyan-500/50 flex items-center justify-center text-cyan-400 mb-2 shadow-[0_0_10px_rgba(6,182,212,0.4)] group-hover:scale-110 transition-transform">
-                    <Brain className="w-5 h-5" />
-                  </div>
-                  <span className="font-cinzel text-xs font-black text-cyan-400 tracking-wider">
-                    INTELLECT
-                  </span>
-                  <div className="text-sm font-black text-white font-sans mt-0.5">
-                    16 <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-900 border border-cyan-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-cyan-400" style={{ width: '16%' }} />
-                  </div>
-                </div>
+                    <div className="mt-3 pt-2.5 border-t border-white/5 space-y-1 text-[11px] text-slate-300">
+                      {attr.subSkills.slice(0, 3).map((sub, idx) => (
+                        <p key={idx} className="hover:text-white transition-colors">+ {sub}</p>
+                      ))}
+                    </div>
 
-                <div className="mt-3 pt-2.5 border-t border-cyan-950/60 space-y-1 text-[11px] text-slate-300">
-                  <p className="hover:text-white transition-colors">+ Reading</p>
-                  <p className="hover:text-white transition-colors">+ Coding</p>
-                  <p className="hover:text-white transition-colors">+ Problem Solving</p>
-                </div>
-              </div>
-
-              {/* 3. WISDOM */}
-              <div className="rounded-2xl p-3.5 bg-gradient-to-b from-[#150a28]/90 to-[#0b0416]/95 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.15)] flex flex-col justify-between hover:border-purple-400 transition-all group">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-xl bg-purple-950/70 border border-purple-500/50 flex items-center justify-center text-purple-300 mb-2 shadow-[0_0_10px_rgba(168,85,247,0.4)] group-hover:scale-110 transition-transform">
-                    <Eye className="w-5 h-5" />
+                    {/* Interactive Train Button */}
+                    <button
+                      onClick={() => handleTrainAttribute(attr.id)}
+                      className={`mt-2.5 w-full py-1 rounded-lg text-[10px] font-bold border border-white/10 bg-white/5 hover:bg-white/10 ${theme.text} hover:scale-105 transition-all flex items-center justify-center gap-1 cursor-pointer`}
+                      title={`Focus training on ${attr.name}`}
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Focus +1</span>
+                    </button>
                   </div>
-                  <span className="font-cinzel text-xs font-black text-purple-300 tracking-wider">
-                    WISDOM
-                  </span>
-                  <div className="text-sm font-black text-white font-sans mt-0.5">
-                    14 <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-900 border border-purple-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-purple-500" style={{ width: '14%' }} />
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-purple-950/60 space-y-1 text-[11px] text-slate-300">
-                  <p className="hover:text-white transition-colors">+ Mindfulness</p>
-                  <p className="hover:text-white transition-colors">+ Journaling</p>
-                  <p className="hover:text-white transition-colors">+ Better Decisions</p>
-                </div>
-              </div>
-
-              {/* 4. DISCIPLINE */}
-              <div className="rounded-2xl p-3.5 bg-gradient-to-b from-[#1c1308]/90 to-[#0f0a04]/95 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.15)] flex flex-col justify-between hover:border-amber-400 transition-all group">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-xl bg-amber-950/70 border border-amber-500/50 flex items-center justify-center text-amber-300 mb-2 shadow-[0_0_10px_rgba(245,158,11,0.4)] group-hover:scale-110 transition-transform">
-                    <Star className="w-5 h-5 fill-amber-400" />
-                  </div>
-                  <span className="font-cinzel text-xs font-black text-amber-300 tracking-wider">
-                    DISCIPLINE
-                  </span>
-                  <div className="text-sm font-black text-white font-sans mt-0.5">
-                    20 <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-900 border border-amber-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-amber-400" style={{ width: '20%' }} />
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-amber-950/60 space-y-1 text-[11px] text-slate-300">
-                  <p className="hover:text-white transition-colors">+ Routine</p>
-                  <p className="hover:text-white transition-colors">+ Consistency</p>
-                  <p className="hover:text-white transition-colors">+ Self Control</p>
-                </div>
-              </div>
-
-              {/* 5. VITALITY */}
-              <div className="rounded-2xl p-3.5 bg-gradient-to-b from-[#081816]/90 to-[#030d0b]/95 border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.15)] flex flex-col justify-between hover:border-emerald-400 transition-all group">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-950/70 border border-emerald-500/50 flex items-center justify-center text-emerald-400 mb-2 shadow-[0_0_10px_rgba(16,185,129,0.4)] group-hover:scale-110 transition-transform">
-                    <Leaf className="w-5 h-5" />
-                  </div>
-                  <span className="font-cinzel text-xs font-black text-emerald-400 tracking-wider">
-                    VITALITY
-                  </span>
-                  <div className="text-sm font-black text-white font-sans mt-0.5">
-                    17 <span className="text-xs font-normal text-slate-400">/ 100</span>
-                  </div>
-                  <div className="w-full h-1.5 rounded-full bg-slate-900 border border-emerald-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-400" style={{ width: '17%' }} />
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-2.5 border-t border-emerald-950/60 space-y-1 text-[11px] text-slate-300">
-                  <p className="hover:text-white transition-colors">+ Sleep</p>
-                  <p className="hover:text-white transition-colors">+ Nutrition</p>
-                  <p className="hover:text-white transition-colors">+ Overall Health</p>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 
@@ -452,16 +430,14 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                     name: "Pathfinder's Ring",
                     rarity: 'Epic',
                     bonus: '+5 XP Gain',
+                    img: itemRingImg,
                     desc: 'An antique signet carrying a glowing amethyst that magnifies knowledge acquired from daily routines.'
                   });
                 }}
                 className="rounded-2xl p-3 bg-gradient-to-b from-[#140a28]/90 to-[#090414]/95 border border-purple-500/60 hover:border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)] flex items-center gap-3 cursor-pointer transition-all hover:scale-[1.02] group"
               >
                 <div className="w-14 h-14 rounded-xl bg-[#0d061c] border border-purple-400/60 overflow-hidden shrink-0 flex items-center justify-center relative shadow-[0_0_10px_rgba(168,85,247,0.4)]">
-                  {/* Glowing Signet Ring Emblem */}
-                  <div className="w-10 h-10 rounded-full border-2 border-amber-400/80 bg-gradient-to-b from-purple-900 to-indigo-950 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.8)]">
-                    <div className="w-4 h-4 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(216,180,254,1)]" />
-                  </div>
+                  <img src={itemRingImg} alt="Pathfinder's Ring" referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-xs font-bold text-white tracking-wide truncate group-hover:text-purple-200">
@@ -560,7 +536,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Total Quests */}
               <div className="rounded-xl p-3 bg-purple-950/40 border border-purple-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(168,85,247,0.15)] group hover:scale-105 transition-transform">
                 <BookOpen className="w-5 h-5 text-amber-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">24</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{quests.length}</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Total Quests
                 </span>
@@ -569,7 +545,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Completed */}
               <div className="rounded-xl p-3 bg-emerald-950/40 border border-emerald-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(16,185,129,0.15)] group hover:scale-105 transition-transform">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">18</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{completedQuestsCount}</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Completed
                 </span>
@@ -578,7 +554,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Total XP */}
               <div className="rounded-xl p-3 bg-purple-950/40 border border-purple-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(168,85,247,0.15)] group hover:scale-105 transition-transform">
                 <Sparkles className="w-5 h-5 text-purple-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">12,450</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{profile.totalXP.toLocaleString()}</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Total XP
                 </span>
@@ -587,7 +563,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Gold */}
               <div className="rounded-xl p-3 bg-amber-950/40 border border-amber-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(245,158,11,0.15)] group hover:scale-105 transition-transform">
                 <Coins className="w-5 h-5 text-amber-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">720</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{profile.gold.toLocaleString()}</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Gold
                 </span>
@@ -596,7 +572,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Current Streak */}
               <div className="rounded-xl p-3 bg-orange-950/40 border border-orange-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(249,115,22,0.15)] group hover:scale-105 transition-transform">
                 <Flame className="w-5 h-5 text-orange-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">12 Days</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{profile.streakDays} Days</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Current Streak
                 </span>
@@ -605,7 +581,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               {/* Achievements */}
               <div className="rounded-xl p-3 bg-amber-950/40 border border-amber-700/40 flex flex-col items-center justify-center text-center shadow-[0_0_12px_rgba(245,158,11,0.15)] group hover:scale-105 transition-transform">
                 <Trophy className="w-5 h-5 text-amber-400 mb-1.5" />
-                <span className="text-lg sm:text-xl font-black text-white font-sans">8 / 25</span>
+                <span className="text-lg sm:text-xl font-black text-white font-sans">{unlockedAchievementsCount} / {achievements.length}</span>
                 <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase mt-0.5">
                   Achievements
                 </span>
@@ -627,7 +603,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               </div>
               <div className="min-w-0">
                 <h4 className="font-cinzel text-base font-black text-purple-300 tracking-wider">
-                  {currentTitle}
+                  {profile.title || currentTitle}
                 </h4>
                 <p className="text-xs text-slate-300 mt-0.5">
                   Exploring a better version of yourself.
@@ -647,12 +623,12 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="text-white">Trailblazer</span>
-                    <span className="text-slate-400 font-normal">12 / 20</span>
+                    <span className="text-slate-400 font-normal">{profile.level} / 20</span>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-0.5">Reach Level 20</p>
                   {/* Progress bar */}
                   <div className="w-full h-1.5 rounded-full bg-slate-900 border border-sky-900/40 mt-1.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ width: '60%' }} />
+                    <div className="h-full rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ width: `${Math.min(100, Math.round((profile.level / 20) * 100))}%` }} />
                   </div>
                 </div>
               </div>
@@ -720,10 +696,10 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
             {/* Artwork background */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
               <img
-                src={promoCliffImg}
+                src={realmFantasyBg}
                 alt="Stronger You"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-center filter saturate-125 opacity-70 group-hover:scale-105 transition-transform duration-700"
+                className="w-full h-full object-cover object-center filter saturate-125 opacity-75 group-hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#080416] via-[#080416]/50 to-transparent" />
             </div>
@@ -731,7 +707,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
             <div className="relative z-10 flex justify-end">
               <p className="font-cinzel text-xs sm:text-sm font-black text-slate-100 text-right tracking-widest uppercase leading-snug drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)] max-w-[200px]">
                 “A STRONGER YOU<br />
-                <span className="text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]">LIVES WITHIN.”</span>
+                <span>LIVES WITHIN.”</span>
               </p>
             </div>
 
@@ -799,9 +775,12 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               onClick={() => {
                 soundFx.playCelebration();
                 setIsEditAvatarOpen(false);
+                if (setProfile) {
+                  setProfile(prev => ({ ...prev, name: characterName }));
+                }
                 showToast(`Hero profile updated to ${characterName}!`);
               }}
-              className="w-full py-2.5 rounded-xl bg-purple-800 hover:bg-purple-700 text-xs font-bold uppercase tracking-wider text-white transition-colors"
+              className="w-full py-2.5 rounded-xl bg-purple-800 hover:bg-purple-700 text-xs font-bold uppercase tracking-wider text-white transition-colors cursor-pointer"
             >
               Save Changes
             </button>
@@ -840,6 +819,9 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                     if (t.unlocked) {
                       soundFx.playLevelUp();
                       setCurrentTitle(t.name);
+                      if (setProfile) {
+                        setProfile(prev => ({ ...prev, title: t.name }));
+                      }
                       setIsChangeTitleOpen(false);
                       showToast(`Equipped title: ${t.name}!`);
                     } else {

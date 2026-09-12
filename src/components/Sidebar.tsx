@@ -14,6 +14,8 @@ import { soundFx } from '../sound';
 import parchmentLanternImg from '../assets/images/parchment_lantern_1789201037103.jpg';
 import sidebarSorcererImg from '../assets/images/sidebar_sorcerer_1789201023018.jpg';
 import promoCliffImg from '../assets/images/promo_cliff_1789201593655.jpg';
+import sidebarArchImg from '../assets/images/sidebar_arch_realm.jpg';
+import sidebarBetterHabitsImg from '../assets/images/sidebar_better_habits.jpg';
 
 interface SidebarProps {
   currentTab: string;
@@ -124,19 +126,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={`
                     w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group
                     ${isActive 
-                      ? 'bg-gradient-to-r from-purple-900 via-fuchsia-950/80 to-purple-800 text-white border border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.55)]' 
+                      ? 'bg-gradient-to-r from-purple-900/90 via-purple-950/80 to-[#1e0a38] text-white border-2 border-purple-500 shadow-[0_0_22px_rgba(168,85,247,0.7),inset_0_0_12px_rgba(168,85,247,0.3)]' 
                       : 'text-slate-400 hover:text-slate-100 hover:bg-purple-950/25 border border-transparent'}
                   `}
                 >
                   <div className="flex items-center gap-3">
                     <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-                      isActive ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.9)]' : 'text-slate-400 group-hover:text-purple-300'
+                      isActive ? 'text-purple-200 drop-shadow-[0_0_10px_rgba(216,180,254,1)]' : 'text-slate-400 group-hover:text-purple-300'
                     }`} />
                     <span className="tracking-wide">{item.label}</span>
                   </div>
 
                   {item.badge !== undefined && (
-                    <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-purple-600/80 rounded-full border border-purple-400/50 shadow-[0_0_8px_rgba(168,85,247,0.5)]">
+                    <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-purple-600/90 rounded-full border border-purple-400/60 shadow-[0_0_10px_rgba(168,85,247,0.6)]">
                       {item.badge}
                     </span>
                   )}
@@ -148,27 +150,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Bottom Silhouette & Quote Card */}
         <div className="p-3 relative overflow-hidden">
-          <div className="relative rounded-2xl p-4 overflow-hidden border border-purple-800/40 bg-gradient-to-b from-[#110d28]/90 to-[#190924]/95 min-h-[170px] flex flex-col justify-end group shadow-xl">
+          <div className="relative rounded-2xl p-4 overflow-hidden border border-purple-800/40 bg-gradient-to-b from-[#110d28]/90 to-[#190924]/95 min-h-[190px] flex flex-col justify-end group shadow-xl">
             {/* Background artwork */}
-            <div className="absolute inset-0 pointer-events-none opacity-65 overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none opacity-80 overflow-hidden">
               <img
                 src={
-                  currentTab === 'history' 
+                  currentTab === 'settings'
+                    ? sidebarBetterHabitsImg
+                    : currentTab === 'achievements'
+                    ? promoCliffImg
+                    : currentTab === 'history' 
                     ? sidebarSorcererImg 
                     : currentTab === 'character' 
-                    ? promoCliffImg 
+                    ? sidebarArchImg 
+                    : currentTab === 'inventory'
+                    ? sidebarSorcererImg
                     : parchmentLanternImg
                 }
                 alt="Discipline & Journey"
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover object-center filter saturate-125 transform transition-transform duration-500 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0c0618] via-[#0c0618]/50 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#090414] via-[#090414]/50 to-transparent" />
             </div>
 
             {/* Motivational Text */}
             <div className="relative z-10">
-              {currentTab === 'history' ? (
+              {currentTab === 'settings' ? null : currentTab === 'achievements' ? (
+                <div className="space-y-1">
+                  <p className="font-cinzel text-xs font-black tracking-widest text-slate-100 uppercase leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    DISCIPLINE<br />
+                    TODAY<br />
+                    A BRIGHTER<br />
+                    TOMORROW.
+                  </p>
+                </div>
+              ) : currentTab === 'inventory' ? (
+                <div className="space-y-1">
+                  <p className="font-cinzel text-xs font-black tracking-widest text-slate-100 uppercase leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    COLLECT<br />
+                    USE<br />
+                    IMPROVE<br />
+                    BECOME.
+                  </p>
+                  <div className="flex items-center gap-1 text-[10px] text-purple-400 select-none pt-0.5">
+                    <span className="w-4 h-[1px] bg-purple-500/50" />
+                    <span>✦</span>
+                    <span className="w-4 h-[1px] bg-purple-500/50" />
+                  </div>
+                </div>
+              ) : currentTab === 'character' ? (
+                <div className="space-y-1">
+                  <p className="font-cinzel text-xs font-black tracking-widest text-slate-100 uppercase leading-snug drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+                    DISCIPLINE<br />
+                    TODAY.<br />
+                    A BRIGHTER<br />
+                    TOMORROW.
+                  </p>
+                </div>
+              ) : currentTab === 'history' ? (
                 <div className="space-y-1">
                   <p className="font-cinzel text-xs font-black tracking-widest text-slate-100 uppercase leading-snug drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">
                     EVERY<br />

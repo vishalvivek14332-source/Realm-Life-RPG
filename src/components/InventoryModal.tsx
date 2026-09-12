@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Package, Sparkles, Shield, Flame, BookOpen, Check } from 'lucide-react';
 import { InventoryItem } from '../types';
 import { soundFx } from '../sound';
+import { ITEM_PICTURES } from './InventoryView';
 
 interface InventoryModalProps {
   isOpen: boolean;
@@ -66,16 +67,30 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
               className="p-4 rounded-xl bg-[#081720]/90 border border-teal-900/40 hover:border-teal-500/50 transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-cinzel text-sm font-bold text-slate-100">
-                    {item.name}
-                  </h3>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${getRarityBadge(item.rarity)}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-teal-500/40 shrink-0 bg-black/50 shadow-md">
+                      <img
+                        src={ITEM_PICTURES[item.id] || item.image}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-cinzel text-sm font-bold text-slate-100">
+                        {item.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-sans">
+                        x{item.quantity} in pack
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase tracking-wider ${getRarityBadge(item.rarity)}`}>
                     {item.rarity}
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                <p className="text-xs text-slate-400 mt-2.5 leading-relaxed">
                   {item.description}
                 </p>
 

@@ -12,10 +12,13 @@ import { QuestBoard } from './components/QuestBoard';
 import { AddQuestView } from './components/AddQuestView';
 import { HistoryView } from './components/HistoryView';
 import { CharacterView } from './components/CharacterView';
+import { InventoryView } from './components/InventoryView';
 import { AddQuestModal } from './components/AddQuestModal';
 import { CharacterModal } from './components/CharacterModal';
 import { InventoryModal } from './components/InventoryModal';
 import { AchievementsModal } from './components/AchievementsModal';
+import { AchievementsView } from './components/AchievementsView';
+import { SettingsView } from './components/SettingsView';
 import { LevelUpCelebration } from './components/LevelUpCelebration';
 import { 
   initialProfile, 
@@ -49,8 +52,8 @@ export default function App() {
     { day: 'Sun', checked: false }
   ]);
 
-  // UI state - default to 'history' to match user's uploaded History.png view directly!
-  const [currentTab, setCurrentTab] = useState('history');
+  // UI state - default to 'dashboard'
+  const [currentTab, setCurrentTab] = useState('dashboard');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,12 +83,19 @@ export default function App() {
     const targetQuest = quests.find(q => q.id === questId);
     if (!targetQuest) return;
 
+    // Strict guard: quest already completed or claimed - cannot be spammed
+    if (targetQuest.completed || targetQuest.progress >= 100) {
+      showToast(`Quest "${targetQuest.title}" has already been claimed!`);
+      return;
+    }
+
     soundFx.playQuestProgress();
 
     // Increment progress by 20%
     const newProgress = Math.min(100, targetQuest.progress + 20);
     const est = targetQuest.estimatedMinutes || 30;
     const newMins = Math.round((est * newProgress) / 100);
+    const isNowCompleted = newProgress >= 100;
 
     setQuests(prev => prev.map(q => {
       if (q.id === questId) {
@@ -93,18 +103,18 @@ export default function App() {
           ...q, 
           progress: newProgress,
           currentMinutes: newMins,
-          completed: newProgress === 100
+          completed: isNowCompleted
         };
       }
       return q;
     }));
 
-    if (newProgress === 100) {
+    if (isNowCompleted) {
       // Completed quest!
       soundFx.playQuestComplete();
       showToast(`Quest Complete: ${targetQuest.title}! +${targetQuest.xpReward} XP, +${targetQuest.goldReward} Gold!`);
 
-      // Award XP and Gold
+      // Award XP and Gold once
       awardXPAndGold(targetQuest.xpReward, targetQuest.goldReward, targetQuest.attribute, targetQuest.title);
     } else {
       showToast(`Quest Progress: ${targetQuest.title} is now at ${newProgress}%! (${newMins}/${est} mins)`);
@@ -115,6 +125,12 @@ export default function App() {
   const handleCompleteQuestDirectly = (questId: string) => {
     const targetQuest = quests.find(q => q.id === questId);
     if (!targetQuest) return;
+
+    // Strict guard: quest already completed or claimed - cannot be spammed
+    if (targetQuest.completed || targetQuest.progress >= 100) {
+      showToast(`Quest "${targetQuest.title}" has already been claimed!`);
+      return;
+    }
 
     soundFx.playQuestComplete();
     const est = targetQuest.estimatedMinutes || 30;
@@ -243,21 +259,107 @@ export default function App() {
 
   // Use / Equip inventory item
   const handleUseItem = (itemId: string) => {
-    setInventory(prev => prev.map(item => {
-      if (item.id === itemId) {
-        if (item.type === 'potion') {
-          showToast(`Drank ${item.name}! Effect active: ${item.bonus}`);
-          soundFx.playQuestComplete();
+    const targetItem = inventory.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    if (targetItem.type === 'potion' || targetItem.category === 'consumables' || targetItem.category === 'boosts') {
+      if (targetItem.quantity <= 0) {
+        showToast(`No charges left for "${targetItem.name}"!`);
+        return;
+      }
+
+      // Determine XP, Gold and Attribute rewards based on item
+      let xpAward = 250;
+      let goldAward = 0;
+      let attrBoost: AttributeType | undefined = undefined;
+
+      const idLow = itemId.toLowerCase();
+      if (idLow.includes('focus')) {
+        xpAward = 350;
+        attrBoost = 'intellect';
+      } else if (idLow.includes('health') || idLow.includes('vitality')) {
+        xpAward = 250;
+        attrBoost = 'vitality';
+      } else if (idLow.includes('productivity') || idLow.includes('brew')) {
+        xpAward = 400;
+        goldAward = 75;
+        attrBoost = 'discipline';
+      } else if (idLow.includes('time_shard') || idLow.includes('shard')) {
+        xpAward = 600;
+        goldAward = 150;
+      } else if (idLow.includes('knowledge') || idLow.includes('scroll') || idLow.includes('tome')) {
+        xpAward = 500;
+        attrBoost = 'wisdom';
+      } else if (idLow.includes('phoenix')) {
+        xpAward = 1000;
+        goldAward = 250;
+        attrBoost = 'vitality';
+      } else if (idLow.includes('energy')) {
+        xpAward = 200;
+        goldAward = 35;
+        attrBoost = 'strength';
+      } else if (idLow.includes('token') || idLow.includes('badge') || idLow.includes('trophy')) {
+        xpAward = 750;
+        goldAward = 300;
+      }
+
+      setInventory(prev => prev.map(item => {
+        if (item.id === itemId) {
           return { ...item, quantity: Math.max(0, item.quantity - 1) };
-        } else {
-          const nextEquipped = !item.equipped;
-          showToast(nextEquipped ? `Equipped ${item.name}!` : `Unequipped ${item.name}.`);
-          soundFx.playClick();
+        }
+        return item;
+      }));
+
+      soundFx.playCelebration();
+      showToast(`Consumed ${targetItem.name}! +${xpAward} XP${goldAward > 0 ? `, +${goldAward} Gold` : ''}! (${targetItem.bonus})`);
+      awardXPAndGold(xpAward, goldAward, attrBoost, `Consumed ${targetItem.name}`);
+    } else {
+      const nextEquipped = !targetItem.equipped;
+      setInventory(prev => prev.map(item => {
+        if (item.id === itemId) {
           return { ...item, equipped: nextEquipped };
         }
+        return item;
+      }));
+      showToast(nextEquipped ? `Equipped ${targetItem.name}! (${targetItem.bonus})` : `Unequipped ${targetItem.name}.`);
+      soundFx.playClick();
+    }
+  };
+
+  // Sell inventory item for Gold
+  const handleSellItem = (itemId: string, goldPrice: number) => {
+    const target = inventory.find(i => i.id === itemId);
+    if (!target || target.quantity <= 0) {
+      showToast("Cannot sell: none left in inventory!");
+      return;
+    }
+
+    setInventory(prev => prev.map(item => {
+      if (item.id === itemId) {
+        return { ...item, quantity: Math.max(0, item.quantity - 1) };
       }
       return item;
     }));
+
+    setProfile(prev => ({
+      ...prev,
+      gold: prev.gold + goldPrice
+    }));
+
+    setActivities(acts => [
+      {
+        id: `act-${Date.now()}-sell`,
+        type: 'item_acquired',
+        title: `Sold ${target.name} for +${goldPrice} Gold`,
+        gold: goldPrice,
+        timeAgo: 'Just now',
+        timestamp: Date.now()
+      },
+      ...acts
+    ]);
+
+    soundFx.playQuestComplete();
+    showToast(`Merchant Vault: Sold 1x "${target.name}" for +${goldPrice} Gold!`);
   };
 
   // Filter quests & activities by search query
@@ -287,20 +389,10 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         setCurrentTab={(tab) => {
-          if (tab === 'dashboard' || tab === 'quests' || tab === 'add_quest' || tab === 'history') {
-            setCurrentTab(tab);
-          } else if (tab === 'character') {
-            setIsCharacterOpen(true);
-          } else if (tab === 'inventory') {
-            setIsInventoryOpen(true);
-          } else if (tab === 'achievements') {
-            setIsAchievementsOpen(true);
-          } else if (tab === 'settings') {
-            showToast("Realm Settings initialized: High-fidelity audio, dark mode, and cloud syncing are active.");
-          }
+          setCurrentTab(tab);
         }}
         openAddQuest={() => setCurrentTab('add_quest')}
-        questCount={quests.length}
+        questCount={quests.filter(q => !q.completed).length}
         mobileOpen={mobileNavOpen}
         setMobileOpen={setMobileNavOpen}
       />
@@ -310,18 +402,80 @@ export default function App() {
         {/* Top Header */}
         <TopHeader
           profile={profile}
+          currentTab={currentTab}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           soundEnabled={soundEnabled}
           setSoundEnabled={setSoundEnabled}
           setMobileOpen={setMobileNavOpen}
-          onProfileClick={() => setIsCharacterOpen(true)}
+          onProfileClick={() => setCurrentTab('character')}
           onNotificationsClick={() => showToast("You have 1 pending daily trial available in Active Quests!")}
+          onSettingsClick={() => setCurrentTab('settings')}
         />
 
-        {/* Main Canvas: History View OR Add Quest View OR Quest Board OR Overview Dashboard */}
+        {/* Main Canvas: Settings View OR Achievements View OR Inventory View OR Character View OR History View OR Add Quest View OR Quest Board OR Overview Dashboard */}
         <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto space-y-6">
-          {currentTab === 'history' ? (
+          {currentTab === 'settings' ? (
+            /* Dedicated Settings View matching the reference screenshot */
+            <SettingsView
+              showToast={showToast}
+              soundEnabled={soundEnabled}
+              setSoundEnabled={setSoundEnabled}
+              profile={profile}
+            />
+          ) : currentTab === 'achievements' ? (
+            /* Dedicated Achievements View matching the reference screenshot */
+            <AchievementsView
+              achievements={achievements}
+              showToast={showToast}
+              onProgressAchievement={(id) => {
+                setAchievements(prev => prev.map(a => {
+                  if (a.id === id) {
+                    if (a.status === 'completed' || a.unlocked || a.progress >= a.maxProgress) {
+                      return a;
+                    }
+                    const newProg = Math.min(a.maxProgress, a.progress + 1);
+                    const completed = newProg >= a.maxProgress;
+                    if (completed) {
+                      soundFx.playAchievementUnlock();
+                      showToast(`Achievement Unlocked: "${a.title}"! +${a.xpReward} XP, +${a.goldReward} Gold!`);
+                      awardXPAndGold(a.xpReward, a.goldReward);
+                    }
+                    return {
+                      ...a,
+                      progress: newProg,
+                      unlocked: completed,
+                      status: completed ? 'completed' : 'in_progress'
+                    };
+                  }
+                  return a;
+                }));
+              }}
+            />
+          ) : currentTab === 'inventory' ? (
+            /* Dedicated Inventory View matching the reference screenshot */
+            <InventoryView
+              items={inventory}
+              onUseItem={handleUseItem}
+              onSellItem={handleSellItem}
+              showToast={showToast}
+            />
+          ) : currentTab === 'character' ? (
+            /* Dedicated Character View matching the reference screenshot */
+            <CharacterView
+              profile={profile}
+              setProfile={setProfile}
+              attributes={attributes}
+              setAttributes={setAttributes}
+              inventory={inventory}
+              setInventory={setInventory}
+              quests={quests}
+              achievements={achievements}
+              showToast={showToast}
+              onOpenInventory={() => setCurrentTab('inventory')}
+              onOpenAchievements={() => setCurrentTab('achievements')}
+            />
+          ) : currentTab === 'history' ? (
             /* Dedicated Adventure Log / History View matching the uploaded History.png reference image */
             <HistoryView
               showToast={showToast}
@@ -369,16 +523,19 @@ export default function App() {
                 {/* Quick Access Action Cards (Add Quest, Character, Inventory, Achievements) */}
                 <QuickAccess
                   onAddQuest={() => setCurrentTab('add_quest')}
-                  onOpenCharacter={() => setIsCharacterOpen(true)}
-                  onOpenInventory={() => setIsInventoryOpen(true)}
-                  onOpenAchievements={() => setIsAchievementsOpen(true)}
+                  onOpenCharacter={() => setCurrentTab('character')}
+                  onOpenInventory={() => setCurrentTab('inventory')}
+                  onOpenAchievements={() => setCurrentTab('achievements')}
                 />
 
                 {/* Recent Activity Log */}
                 <div id="recent-activity-section">
                   <RecentActivity 
                     activities={filteredActivities}
-                    onViewAll={() => showToast("All past quest milestones and accomplishments are synchronized.")}
+                    onViewAll={() => {
+                      soundFx.playClick();
+                      setCurrentTab('history');
+                    }}
                   />
                 </div>
 

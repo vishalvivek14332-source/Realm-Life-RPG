@@ -608,27 +608,39 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
 
             {/* Action Buttons */}
             <div className="mt-5 space-y-2.5">
-              <button
-                onClick={() => {
-                  soundFx.playClick();
-                  onContinueQuest(selectedQuest.id);
-                }}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-extrabold text-sm tracking-wide shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_25px_rgba(168,85,247,0.7)] transition-all flex items-center justify-center gap-2 group"
-              >
-                <span>Continue Quest</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+              {selectedQuest.completed || selectedQuest.progress >= 100 ? (
+                <button
+                  disabled
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 font-extrabold text-sm tracking-wide transition-all flex items-center justify-center gap-2 cursor-default opacity-85 select-none pointer-events-none"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                  <span>Claimed & Completed</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      soundFx.playClick();
+                      onContinueQuest(selectedQuest.id);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-extrabold text-sm tracking-wide shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_25px_rgba(168,85,247,0.7)] transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                  >
+                    <span>Continue Quest</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
 
-              <button
-                onClick={() => {
-                  soundFx.playQuestComplete();
-                  onCompleteQuest(selectedQuest.id);
-                }}
-                className="w-full py-2 px-4 rounded-xl bg-black/40 hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-200 border border-white/10 hover:border-emerald-500/50 font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2"
-              >
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                <span>Mark as Complete</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      soundFx.playQuestComplete();
+                      onCompleteQuest(selectedQuest.id);
+                    }}
+                    className="w-full py-2 px-4 rounded-xl bg-black/40 hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-200 border border-white/10 hover:border-emerald-500/50 font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span>Mark as Complete</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
