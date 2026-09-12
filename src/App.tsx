@@ -668,6 +668,133 @@ export default function App() {
     showToast(`Merchant Vault: Sold 1x "${target.name}" for +${goldPrice} Gold!`);
   };
 
+  // Buy virtual items with Gold
+  const handleBuyItem = (itemTemplate: any) => {
+    if (profile.gold < itemTemplate.price) {
+      soundFx.playClick();
+      showToast(`⚠️ Insufficient Gold! You need ${itemTemplate.price - profile.gold} more Gold to buy "${itemTemplate.name}".`);
+      return;
+    }
+
+    setProfile(prev => ({
+      ...prev,
+      gold: prev.gold - itemTemplate.price
+    }));
+
+    setInventory(prev => {
+      const existing = prev.find(i => i.id === itemTemplate.id);
+      if (existing) {
+        return prev.map(i => i.id === itemTemplate.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      return [
+        ...prev,
+        {
+          id: itemTemplate.id,
+          name: itemTemplate.name,
+          rarity: itemTemplate.rarity,
+          type: itemTemplate.type,
+          category: itemTemplate.category,
+          description: itemTemplate.description,
+          bonus: itemTemplate.bonus,
+          sellPrice: Math.round(itemTemplate.price * 0.6),
+          icon: itemTemplate.icon,
+          quantity: 1,
+          equipped: false,
+          healthRestore: itemTemplate.healthRestore,
+          energyRestore: itemTemplate.energyRestore
+        }
+      ];
+    });
+
+    soundFx.playCelebration();
+    showToast(`🛒 Purchased "${itemTemplate.name}" for ${itemTemplate.price} Gold! Added to your Vault.`);
+
+    setActivities(acts => [
+      {
+        id: `act-${Date.now()}-buy`,
+        type: 'item_acquired',
+        title: `Purchased ${itemTemplate.name} for ${itemTemplate.price} Gold`,
+        timeAgo: 'Just now',
+        timestamp: Date.now()
+      },
+      ...acts
+    ]);
+  };
+
+  // Buy & Equip Realm Theme with Gold
+  const handleBuyTheme = (themeId: string, themeName: string, price: number) => {
+    if (profile.unlockedThemes?.includes(themeId)) {
+      setProfile(prev => ({ ...prev, currentTheme: themeId }));
+      soundFx.playClick();
+      showToast(`🎨 Realm Theme switched to "${themeName}"!`);
+      return;
+    }
+
+    if (profile.gold < price) {
+      soundFx.playClick();
+      showToast(`⚠️ Insufficient Gold! You need ${price - profile.gold} more Gold to unlock theme "${themeName}".`);
+      return;
+    }
+
+    setProfile(prev => ({
+      ...prev,
+      gold: prev.gold - price,
+      currentTheme: themeId,
+      unlockedThemes: [...(prev.unlockedThemes || ['theme-default']), themeId]
+    }));
+
+    soundFx.playCelebration();
+    showToast(`✨ Unlocked & Activated Realm Theme: "${themeName}" for ${price} Gold!`);
+
+    setActivities(acts => [
+      {
+        id: `act-${Date.now()}-theme`,
+        type: 'item_acquired',
+        title: `Unlocked Realm Theme: ${themeName}`,
+        timeAgo: 'Just now',
+        timestamp: Date.now()
+      },
+      ...acts
+    ]);
+  };
+
+  // Buy & Equip Profile Badge / Title with Gold
+  const handleBuyBadge = (badgeTitle: string, price: number) => {
+    if (profile.unlockedTitles?.includes(badgeTitle)) {
+      setProfile(prev => ({ ...prev, title: badgeTitle }));
+      soundFx.playClick();
+      showToast(`🛡️ Equipped Title: "${badgeTitle}"!`);
+      return;
+    }
+
+    if (profile.gold < price) {
+      soundFx.playClick();
+      showToast(`⚠️ Insufficient Gold! You need ${price - profile.gold} more Gold to unlock title "${badgeTitle}".`);
+      return;
+    }
+
+    setProfile(prev => ({
+      ...prev,
+      gold: prev.gold - price,
+      title: badgeTitle,
+      unlockedTitles: [...(prev.unlockedTitles || [prev.title || 'Novice Wanderer']), badgeTitle]
+    }));
+
+    soundFx.playCelebration();
+    showToast(`🏆 Prestige Title Unlocked: "${badgeTitle}" for ${price} Gold! Equipped to profile.`);
+
+    setActivities(acts => [
+      {
+        id: `act-${Date.now()}-badge`,
+        type: 'achievement',
+        title: `Unlocked Prestige Title: ${badgeTitle}`,
+        timeAgo: 'Just now',
+        timestamp: Date.now()
+      },
+      ...acts
+    ]);
+  };
+
   // Filter quests & activities by search query
   const filteredQuests = quests.filter(q => 
     q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -678,12 +805,27 @@ export default function App() {
   // Active quests in progress (not completed)
   const activeQuests = filteredQuests.filter(q => q.active && !q.completed);
 
+  // Dynamic theme wrapper class
+  const getThemeWrapperClass = () => {
+    switch (profile.currentTheme) {
+      case 'theme-solar':
+        return 'bg-[#120803] text-amber-50';
+      case 'theme-emerald':
+        return 'bg-[#03140c] text-emerald-50';
+      case 'theme-crimson':
+        return 'bg-[#140407] text-rose-50';
+      case 'theme-default':
+      default:
+        return 'bg-[#070814] text-slate-100';
+    }
+  };
+
   const filteredActivities = activities.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="min-h-screen bg-[#070814] text-slate-100 flex relative overflow-x-hidden">
+    <div className={`min-h-screen ${getThemeWrapperClass()} flex relative overflow-x-hidden transition-colors duration-500`}>
       {/* Background ambient lighting effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
         {/* Purple top glow */}
@@ -724,7 +866,7 @@ export default function App() {
         />
 
         {/* Main Canvas: Settings View OR Achievements View OR Inventory View OR Character View OR History View OR Add Quest View OR Quest Board OR Overview Dashboard */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto space-y-6">
+        <main id="main-content" role="main" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto space-y-6 outline-none">
           {currentTab === 'settings' ? (
             /* Dedicated Settings View matching the reference screenshot */
             <SettingsView
@@ -766,8 +908,16 @@ export default function App() {
             /* Dedicated Inventory View matching the reference screenshot */
             <InventoryView
               items={inventory}
+              gold={profile.gold}
               onUseItem={handleUseItem}
               onSellItem={handleSellItem}
+              onBuyItem={handleBuyItem}
+              onBuyTheme={handleBuyTheme}
+              onBuyBadge={handleBuyBadge}
+              unlockedThemes={profile.unlockedThemes}
+              currentTheme={profile.currentTheme}
+              unlockedTitles={profile.unlockedTitles}
+              currentTitle={profile.title}
               showToast={showToast}
             />
           ) : currentTab === 'character' ? (
@@ -889,7 +1039,7 @@ export default function App() {
 
       {/* Floating Interactive Toast Feedback */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl bg-[#170e2b] border border-purple-500/60 shadow-[0_0_25px_rgba(168,85,247,0.4)] text-xs font-bold text-white flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
+        <div role="status" aria-live="polite" aria-atomic="true" className="fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl bg-[#170e2b] border border-purple-500/60 shadow-[0_0_25px_rgba(168,85,247,0.4)] text-xs font-bold text-white flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
           <div className="w-7 h-7 rounded-lg bg-purple-900/80 flex items-center justify-center shrink-0 text-purple-300">
             <Sparkles className="w-4 h-4" />
           </div>

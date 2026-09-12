@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Sparkles, BookOpen, Dumbbell, Scroll, Brain, Shield } from 'lucide-react';
 import { AttributeType, Quest } from '../types';
 import { soundFx } from '../sound';
@@ -20,6 +20,24 @@ export const AddQuestModal: React.FC<AddQuestModalProps> = ({
   const [attribute, setAttribute] = useState<AttributeType>('intellect');
   const [xpReward, setXpReward] = useState(250);
   const [goldReward, setGoldReward] = useState(40);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  const handleCategoryChange = (newCat: Quest['category']) => {
+    setCategory(newCat);
+    if (newCat === 'STUDY') setAttribute('intellect');
+    else if (newCat === 'HEALTH') setAttribute('strength');
+    else if (newCat === 'PERSONAL') setAttribute('wisdom');
+    else if (newCat === 'DISCIPLINE' || newCat === 'WORK' || newCat === 'CAREER') setAttribute('discipline');
+  };
 
   if (!isOpen) return null;
 
@@ -65,7 +83,7 @@ export const AddQuestModal: React.FC<AddQuestModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#0e0f24] border border-purple-500/60 p-6 shadow-[0_0_40px_rgba(168,85,247,0.3)] overflow-hidden">
+      <div role="dialog" aria-modal="true" aria-labelledby="add-quest-title" className="relative w-full max-w-lg rounded-2xl bg-[#0e0f24] border border-purple-500/60 p-6 shadow-[0_0_40px_rgba(168,85,247,0.3)] overflow-hidden">
         {/* Ambient Top Glow */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-purple-600/30 rounded-full blur-3xl pointer-events-none" />
 
@@ -76,7 +94,7 @@ export const AddQuestModal: React.FC<AddQuestModalProps> = ({
               <Plus className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <h2 className="font-cinzel text-lg font-black text-white tracking-wide">
+              <h2 id="add-quest-title" className="font-cinzel text-lg font-black text-white tracking-wide">
                 CREATE NEW QUEST
               </h2>
               <p className="text-xs text-purple-300/70">
@@ -132,14 +150,16 @@ export const AddQuestModal: React.FC<AddQuestModalProps> = ({
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as Quest['category'])}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#141630] border border-purple-900/50 text-white text-sm focus:outline-none focus:border-purple-400"
+                onChange={(e) => handleCategoryChange(e.target.value as Quest['category'])}
+                aria-label="Quest Category"
+                className="w-full px-3 py-2.5 rounded-xl bg-[#141630] border border-purple-900/50 text-white text-xs sm:text-sm focus:outline-none focus:border-purple-400 focus-visible:ring-2 focus-visible:ring-purple-400"
               >
-                <option value="STUDY">STUDY</option>
-                <option value="HEALTH">HEALTH</option>
-                <option value="PERSONAL">PERSONAL</option>
-                <option value="CAREER">CAREER</option>
-                <option value="DISCIPLINE">DISCIPLINE</option>
+                <option value="STUDY">STUDY / CODING (Levels up Intellect)</option>
+                <option value="HEALTH">HEALTH / GYM (Levels up Strength)</option>
+                <option value="PERSONAL">PERSONAL / MINDFULNESS (Levels up Wisdom)</option>
+                <option value="DISCIPLINE">DISCIPLINE / ROUTINE (Levels up Discipline)</option>
+                <option value="WORK">WORK / TASKS (Levels up Discipline)</option>
+                <option value="CAREER">CAREER (Levels up Intellect)</option>
               </select>
             </div>
 
@@ -150,13 +170,14 @@ export const AddQuestModal: React.FC<AddQuestModalProps> = ({
               <select
                 value={attribute}
                 onChange={(e) => setAttribute(e.target.value as AttributeType)}
-                className="w-full px-3 py-2.5 rounded-xl bg-[#141630] border border-purple-900/50 text-white text-sm focus:outline-none focus:border-purple-400"
+                aria-label="Attribute leveled up"
+                className="w-full px-3 py-2.5 rounded-xl bg-[#141630] border border-purple-900/50 text-white text-xs sm:text-sm focus:outline-none focus:border-purple-400 focus-visible:ring-2 focus-visible:ring-purple-400"
               >
-                <option value="intellect">Intellect</option>
-                <option value="strength">Strength</option>
-                <option value="wisdom">Wisdom</option>
-                <option value="discipline">Discipline</option>
-                <option value="vitality">Vitality</option>
+                <option value="intellect">🧠 Intellect (Coding, Problem Solving)</option>
+                <option value="strength">💪 Strength (Gym, Heavy Training)</option>
+                <option value="wisdom">👁️ Wisdom (Mindfulness, Reflection)</option>
+                <option value="discipline">🧭 Discipline (Routine, Consistency)</option>
+                <option value="vitality">🍃 Vitality (Health, Sleep, Energy)</option>
               </select>
             </div>
           </div>

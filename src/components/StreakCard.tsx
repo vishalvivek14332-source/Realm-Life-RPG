@@ -56,12 +56,23 @@ export const StreakCard: React.FC<StreakCardProps> = ({
         <div className="grid grid-cols-7 gap-1 sm:gap-2 pt-2 border-t border-orange-900/60">
           {streakWeek.map((item, idx) => {
             return (
-              <div 
+              <button 
+                type="button"
                 key={item.day} 
-                className="flex flex-col items-center gap-1.5 cursor-pointer group"
+                tabIndex={0}
+                aria-label={`Day ${item.day}: ${item.checked ? 'Streak sealed and completed' : 'Click or press Enter to seal day streak'}`}
+                aria-pressed={item.checked}
+                className="flex flex-col items-center gap-1.5 cursor-pointer group p-1 rounded-xl focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none transition-all"
                 onClick={() => {
                   soundFx.playClick();
                   onCheckInDay(idx);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    soundFx.playClick();
+                    onCheckInDay(idx);
+                  }
                 }}
               >
                 <span className="text-[10px] font-black text-slate-300 group-hover:text-amber-300 uppercase transition-colors">
@@ -77,7 +88,7 @@ export const StreakCard: React.FC<StreakCardProps> = ({
                     <span className="w-2 h-2 rounded-full bg-amber-400/50 group-hover:bg-amber-400 transition-colors animate-pulse" />
                   </div>
                 )}
-              </div>
+              </button>
             );
           })}
         </div>

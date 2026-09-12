@@ -22,7 +22,10 @@ export const initialProfile: CharacterProfile = {
   totalXP: 0,
   streakDays: 1,
   class: 'Novice Initiate',
-  equippedItems: ['trackers_blade_item', 'mindful_cloak']
+  equippedItems: ['trackers_blade_item', 'mindful_cloak'],
+  unlockedTitles: ['Novice Wanderer', 'Trailblazer'],
+  unlockedThemes: ['theme-default'],
+  currentTheme: 'theme-default'
 };
 
 export const initialAttributes: AttributeStat[] = [

@@ -97,4 +97,7 @@ export interface CharacterProfile {
   class: string;
   avatarUrl?: string;
   equippedItems: string[];
+  unlockedTitles?: string[];
+  unlockedThemes?: string[];
+  currentTheme?: string;
 }

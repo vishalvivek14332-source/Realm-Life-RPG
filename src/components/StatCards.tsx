@@ -124,13 +124,24 @@ export const StatCards: React.FC<StatCardsProps> = ({ attributes, onSelectAttrib
           <div
             key={attr.id}
             id={`stat-card-${attr.id}`}
+            tabIndex={0}
+            role="button"
+            aria-label={`View ${attr.name} attribute details. Current level ${attr.current} of ${attr.max}.`}
             onClick={() => {
               soundFx.playClick();
               if (onSelectAttribute) onSelectAttribute(attr.id);
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                soundFx.playClick();
+                if (onSelectAttribute) onSelectAttribute(attr.id);
+              }
+            }}
             className={`
               relative rounded-xl p-4 bg-gradient-to-b ${theme.bg} border ${theme.border}
               ${theme.glow} transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col justify-between group
+              focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:outline-none
             `}
           >
             {/* Top Row: Centered Icon */}
