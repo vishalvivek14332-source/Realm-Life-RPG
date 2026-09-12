@@ -10,15 +10,19 @@ import questCleanSpace from './assets/images/quest_clean_space_1789200996914.jpg
 
 export const initialProfile: CharacterProfile = {
   name: 'SHADOW',
-  title: 'Pathfinder',
-  level: 12,
-  currentXP: 2450,
-  maxXP: 3000,
-  gold: 100,
-  totalXP: 1250,
-  streakDays: 12,
-  class: 'Night Stalker / Pathfinder',
-  equippedItems: ['cloak_shadows', 'ring_willpower']
+  title: 'Novice Wanderer',
+  level: 0,
+  health: 100,
+  maxHealth: 100,
+  energy: 100,
+  maxEnergy: 100,
+  currentXP: 0,
+  maxXP: 200,
+  gold: 50,
+  totalXP: 0,
+  streakDays: 1,
+  class: 'Novice Initiate',
+  equippedItems: ['trackers_blade_item', 'mindful_cloak']
 };
 
 export const initialAttributes: AttributeStat[] = [
@@ -89,10 +93,12 @@ export const initialQuests: Quest[] = [
     xpReward: 250,
     goldReward: 40,
     attribute: 'intellect',
-    progress: 80,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Medium',
     estimatedMinutes: 30,
-    currentMinutes: 24,
+    currentMinutes: 0,
     frequency: 'Daily',
     quote: '“Focus is the key to extraordinary results.”',
     image: questDeepWork,
@@ -107,10 +113,12 @@ export const initialQuests: Quest[] = [
     xpReward: 300,
     goldReward: 50,
     attribute: 'strength',
-    progress: 50,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Medium',
     estimatedMinutes: 20,
-    currentMinutes: 10,
+    currentMinutes: 0,
     frequency: 'Daily',
     quote: '“Strength doesn’t come from what you can do, but overcoming what you once thought you couldn’t.”',
     image: questMorningExercise,
@@ -125,10 +133,12 @@ export const initialQuests: Quest[] = [
     xpReward: 200,
     goldReward: 30,
     attribute: 'wisdom',
-    progress: 30,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 25,
-    currentMinutes: 8,
+    currentMinutes: 0,
     frequency: 'Daily',
     quote: '“A reader lives a thousand lives before he dies. The man who never reads lives only one.”',
     image: questReadBook,
@@ -143,10 +153,12 @@ export const initialQuests: Quest[] = [
     xpReward: 150,
     goldReward: 20,
     attribute: 'discipline',
-    progress: 60,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 15,
-    currentMinutes: 9,
+    currentMinutes: 0,
     frequency: 'Daily',
     quote: '“By failing to prepare, you are preparing to fail.”',
     image: questPlanDay,
@@ -162,6 +174,8 @@ export const initialQuests: Quest[] = [
     goldReward: 20,
     attribute: 'wisdom',
     progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 10,
     currentMinutes: 0,
@@ -179,10 +193,12 @@ export const initialQuests: Quest[] = [
     xpReward: 100,
     goldReward: 20,
     attribute: 'vitality',
-    progress: 25,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 12,
-    currentMinutes: 3,
+    currentMinutes: 0,
     frequency: 'Daily',
     quote: '“Water is the driving force of all nature and energy.”',
     image: questDrinkWater,
@@ -197,10 +213,12 @@ export const initialQuests: Quest[] = [
     xpReward: 200,
     goldReward: 30,
     attribute: 'intellect',
-    progress: 40,
+    progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Medium',
     estimatedMinutes: 45,
-    currentMinutes: 18,
+    currentMinutes: 0,
     frequency: 'Weekly',
     quote: '“Small disciplines repeated with consistency lead to great achievements.”',
     image: questCompleteAssignment,
@@ -216,6 +234,8 @@ export const initialQuests: Quest[] = [
     goldReward: 20,
     attribute: 'discipline',
     progress: 0,
+    active: false,
+    completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 15,
     currentMinutes: 0,
@@ -308,7 +328,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Master time, or be mastered by it.”',
     sellPrice: 150,
     icon: 'hourglass',
-    quantity: 2,
+    quantity: 0,
     equipped: false
   },
   {
@@ -322,7 +342,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Clarity in a bottle.”',
     sellPrice: 30,
     icon: 'flask',
-    quantity: 5,
+    quantity: 1,
     equipped: false
   },
   {
@@ -336,7 +356,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Vitality renewed.”',
     sellPrice: 15,
     icon: 'apple',
-    quantity: 8,
+    quantity: 2,
     equipped: false
   },
   {
@@ -350,7 +370,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Knowledge compounds without limit.”',
     sellPrice: 80,
     icon: 'book',
-    quantity: 3,
+    quantity: 0,
     equipped: false
   },
   {
@@ -364,7 +384,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Fuel for the relentless.”',
     sellPrice: 10,
     icon: 'sneaker',
-    quantity: 12,
+    quantity: 2,
     equipped: false
   },
   {
@@ -378,7 +398,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“From the ashes, we rise.”',
     sellPrice: 100,
     icon: 'feather',
-    quantity: 1,
+    quantity: 0,
     equipped: false
   },
   {
@@ -392,7 +412,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“The ritual of morning execution.”',
     sellPrice: 12,
     icon: 'coffee',
-    quantity: 6,
+    quantity: 0,
     equipped: false
   },
   {
@@ -407,8 +427,8 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Forge uncharted ground.”',
     sellPrice: 75,
     icon: 'ring',
-    quantity: 1,
-    equipped: true
+    quantity: 0,
+    equipped: false
   },
   {
     id: 'explorers_compass',
@@ -421,7 +441,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Guidance through the fog.”',
     sellPrice: 60,
     icon: 'compass',
-    quantity: 2,
+    quantity: 0,
     equipped: false
   },
   {
@@ -435,7 +455,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“The weight does not get lighter, you get stronger.”',
     sellPrice: 40,
     icon: 'dumbbell',
-    quantity: 4,
+    quantity: 0,
     equipped: false
   },
   {
@@ -449,7 +469,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“See through the turbulence of impulse.”',
     sellPrice: 55,
     icon: 'brain',
-    quantity: 3,
+    quantity: 0,
     equipped: false
   },
   {
@@ -463,7 +483,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Nourish the biological vessel.”',
     sellPrice: 18,
     icon: 'leaf',
-    quantity: 7,
+    quantity: 0,
     equipped: false
   },
   {
@@ -477,7 +497,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Honor earned through the quiet days.”',
     sellPrice: 200,
     icon: 'trophy',
-    quantity: 1,
+    quantity: 0,
     equipped: false
   },
   {
@@ -491,7 +511,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“The past whispers to those who listen.”',
     sellPrice: 25,
     icon: 'scroll',
-    quantity: 2,
+    quantity: 0,
     equipped: false
   },
   {
@@ -505,7 +525,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“Unbroken cadence builds dynasties.”',
     sellPrice: 150,
     icon: 'trophy',
-    quantity: 1,
+    quantity: 0,
     equipped: false
   },
   {
@@ -519,7 +539,7 @@ export const initialInventory: InventoryItem[] = [
     quote: '“The pinnacle of self mastery.”',
     sellPrice: 500,
     icon: 'trophy',
-    quantity: 1,
+    quantity: 0,
     equipped: false
   },
   {

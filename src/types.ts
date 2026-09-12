@@ -21,9 +21,11 @@ export interface Quest {
   xpReward: number;
   goldReward: number;
   attribute: AttributeType;
+  energyCost?: number;
   progress: number; // 0 to 100
   iconName?: 'book' | 'dumbbell' | 'scroll' | 'brain' | 'code' | 'shield';
   completed?: boolean;
+  active?: boolean;
   frequency?: 'Daily' | 'Weekly';
   difficulty?: 'Easy' | 'Medium' | 'Hard' | 'Epic';
   quote?: string;
@@ -34,7 +36,7 @@ export interface Quest {
 
 export interface RecentActivityItem {
   id: string;
-  type: 'completed_quest' | 'achievement' | 'level_up';
+  type: 'completed_quest' | 'achievement' | 'level_up' | 'item_acquired';
   title: string;
   xp?: number;
   gold?: number;
@@ -56,6 +58,8 @@ export interface InventoryItem {
   icon: string;
   image?: string;
   quantity: number;
+  healthRestore?: number;
+  energyRestore?: number;
   equipped?: boolean;
 }
 
@@ -79,6 +83,10 @@ export interface Achievement {
 
 export interface CharacterProfile {
   name: string;
+  health: number;
+  maxHealth: number;
+  energy: number;
+  maxEnergy: number;
   title: string;
   level: number;
   currentXP: number;

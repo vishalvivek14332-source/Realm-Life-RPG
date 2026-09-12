@@ -17,7 +17,8 @@ import {
   Bookmark,
   ArrowRight,
   Flame,
-  Check
+  Check,
+  Zap
 } from 'lucide-react';
 import { Quest } from '../types';
 import { soundFx } from '../sound';
@@ -29,6 +30,7 @@ interface QuestBoardProps {
   onContinueQuest: (questId: string) => void;
   onCompleteQuest: (questId: string) => void;
   onOpenAddQuest: () => void;
+  onAcceptQuest?: (questId: string) => void;
 }
 
 type FilterCategory = 'ALL' | 'DAILY' | 'WEEKLY' | 'STUDY' | 'WORK' | 'HEALTH' | 'PERSONAL';
@@ -38,6 +40,7 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
   onContinueQuest,
   onCompleteQuest,
   onOpenAddQuest,
+  onAcceptQuest,
 }) => {
   const [selectedQuestId, setSelectedQuestId] = useState<string>('quest-1');
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('ALL');
@@ -297,8 +300,13 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                     {/* Dark gradient shadow on bottom of image for readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#13102d] via-transparent to-transparent opacity-90" />
 
-                    {/* Category Pill Tag on Top Right */}
-                    <div className="absolute top-2.5 right-2.5">
+                    {/* Category & Status Pill Tag on Top Right */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                      {quest.active && !isCompleted && (
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider bg-cyan-950/90 text-cyan-300 border border-cyan-400/60 shadow-[0_0_8px_rgba(6,182,212,0.5)] backdrop-blur-md animate-pulse">
+                          ACTIVE
+                        </span>
+                      )}
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black tracking-widest border backdrop-blur-md ${badge.className}`}>
                         {badge.label}
                       </span>
@@ -326,14 +334,24 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                     </div>
 
                     <div className="mt-3.5 space-y-2.5">
-                      {/* Rewards row */}
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-purple-300 flex items-center gap-1 font-sans">
-                          <span className="text-purple-400 drop-shadow-[0_0_4px_#c084fc]">✦</span> +{quest.xpReward} XP
-                        </span>
-                        <span className="text-amber-300 flex items-center gap-1 font-sans">
-                          <span className="text-amber-400 drop-shadow-[0_0_4px_#f59e0b]">★</span> +{quest.goldReward} Gold
-                        </span>
+                      {/* Rewards row with Stamina Energy Cost & Attribute Domain */}
+                      <div className="flex flex-wrap items-center justify-between gap-1.5 text-xs font-bold">
+                        <div className="flex items-center gap-2">
+                          <span className="text-purple-300 flex items-center gap-0.5 font-sans text-[11px]">
+                            <span className="text-purple-400 drop-shadow-[0_0_4px_#c084fc]">✦</span>+{quest.xpReward} XP
+                          </span>
+                          <span className="text-amber-300 flex items-center gap-0.5 font-sans text-[11px]">
+                            <span className="text-amber-400 drop-shadow-[0_0_4px_#f59e0b]">★</span>+{quest.goldReward} Gold
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-cyan-300 px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/40 text-[10px] flex items-center gap-0.5 font-sans">
+                            <Zap className="w-2.5 h-2.5 fill-cyan-400" /> -{quest.energyCost || 10}
+                          </span>
+                          <span className="text-indigo-300 px-1.5 py-0.5 rounded bg-purple-950/60 border border-purple-800/40 text-[9px] uppercase tracking-wider">
+                            +{quest.attribute}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Progress bar + percentage */}
@@ -356,18 +374,21 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                           e.stopPropagation();
                           if (isCompleted) {
                             soundFx.playQuestComplete();
-                          } else {
+                          } else if (quest.active) {
                             soundFx.playClick();
                             onContinueQuest(quest.id);
+                          } else {
+                            soundFx.playClick();
+                            onAcceptQuest?.(quest.id);
                           }
                         }}
                         className={`
-                          w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5
+                          w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer
                           ${isCompleted 
                             ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/80' 
-                            : quest.progress > 0 
-                              ? 'bg-purple-950/80 hover:bg-purple-800 text-purple-200 border border-purple-600/50 hover:border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.25)]' 
-                              : 'bg-[#181238] hover:bg-purple-900/70 text-slate-300 hover:text-white border border-purple-800/40'}
+                            : quest.active 
+                              ? 'bg-gradient-to-r from-purple-800 to-indigo-700 hover:from-purple-700 hover:to-indigo-600 text-white border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]' 
+                              : 'bg-purple-950/60 hover:bg-purple-800/80 text-purple-200 hover:text-white border border-purple-700/50 hover:border-purple-400'}
                         `}
                       >
                         {isCompleted ? (
@@ -375,13 +396,16 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                             <Check className="w-3 h-3 text-emerald-400" />
                             <span>Completed</span>
                           </>
-                        ) : quest.progress > 0 ? (
+                        ) : quest.active ? (
                           <>
                             <span>Continue</span>
                             <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                           </>
                         ) : (
-                          <span>Start Quest</span>
+                          <>
+                            <Sparkles className="w-3 h-3 text-amber-300" />
+                            <span>Accept Quest</span>
+                          </>
                         )}
                       </button>
                     </div>
@@ -616,7 +640,7 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                   <CheckCircle className="w-4 h-4 text-emerald-400" />
                   <span>Claimed & Completed</span>
                 </button>
-              ) : (
+              ) : selectedQuest.active ? (
                 <>
                   <button
                     onClick={() => {
@@ -640,6 +664,17 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                     <span>Mark as Complete</span>
                   </button>
                 </>
+              ) : (
+                <button
+                  onClick={() => {
+                    soundFx.playClick();
+                    onAcceptQuest?.(selectedQuest.id);
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-500 hover:from-amber-500 hover:to-yellow-400 text-amber-950 font-black text-sm tracking-wide shadow-[0_0_20px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-950" />
+                  <span>Accept Quest (+1 Active)</span>
+                </button>
               )}
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Shield } from 'lucide-react';
+import { Star, Shield, Heart, Zap } from 'lucide-react';
 import { CharacterProfile } from '../types';
 import heroShadowBanner from '../assets/images/hero_shadow_banner_1789201471184.jpg';
 import shadowCharacter from '../assets/images/shadow_character_1789200523303.jpg';
@@ -102,6 +102,43 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ profile }) => {
                 {xpNeeded > 0 ? `${xpNeeded.toLocaleString()} XP to next level` : 'Ready to level up!'}
               </p>
             </div>
+            {/* Dual Vitals HUD: HP & Energy Stamina Bars */}
+            <div className="mt-3.5 grid grid-cols-2 gap-3 max-w-md">
+              {/* HP Bar */}
+              <div className="rounded-xl p-2 bg-[#17050d]/80 border border-rose-600/40 shadow-[0_0_12px_rgba(244,63,94,0.15)]">
+                <div className="flex items-center justify-between text-[11px] font-bold text-rose-300 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                    <span>HEALTH</span>
+                  </div>
+                  <span className="font-sans text-xs">{profile.health} / {profile.maxHealth}</span>
+                </div>
+                <div className="w-full h-1.5 bg-rose-950/80 rounded-full overflow-hidden border border-rose-900/40">
+                  <div 
+                    className="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.8)] transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((profile.health / profile.maxHealth) * 100))}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Energy Bar */}
+              <div className="rounded-xl p-2 bg-[#04131d]/80 border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.15)]">
+                <div className="flex items-center justify-between text-[11px] font-bold text-cyan-300 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400" />
+                    <span>ENERGY</span>
+                  </div>
+                  <span className="font-sans text-xs">{profile.energy} / {profile.maxEnergy}</span>
+                </div>
+                <div className="w-full h-1.5 bg-cyan-950/80 rounded-full overflow-hidden border border-cyan-900/40">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-600 via-sky-400 to-cyan-300 rounded-full shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((profile.energy / profile.maxEnergy) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 

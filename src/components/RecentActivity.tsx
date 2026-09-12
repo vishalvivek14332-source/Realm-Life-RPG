@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Trophy, ArrowUpCircle, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Trophy, ArrowUpCircle, ArrowRight, Package } from 'lucide-react';
 import { RecentActivityItem } from '../types';
 
 interface RecentActivityProps {
@@ -20,6 +20,12 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({ activities, onVi
         return (
           <div className="w-8 h-8 rounded-full bg-amber-950/80 border border-amber-500/50 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.35)]">
             <Trophy className="w-4 h-4 text-amber-400" />
+          </div>
+        );
+      case 'item_acquired':
+        return (
+          <div className="w-8 h-8 rounded-full bg-cyan-950/80 border border-cyan-500/50 flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(6,182,212,0.35)]">
+            <Package className="w-4 h-4 text-cyan-300" />
           </div>
         );
       case 'level_up':

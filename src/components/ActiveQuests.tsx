@@ -4,7 +4,9 @@ import {
   CheckCircle,
   Sparkles,
   BookOpen,
-  Dumbbell
+  Dumbbell,
+  Zap,
+  Plus
 } from 'lucide-react';
 import { Quest } from '../types';
 import { soundFx } from '../sound';
@@ -16,12 +18,14 @@ interface ActiveQuestsProps {
   quests: Quest[];
   onContinueQuest: (questId: string) => void;
   onViewAll?: () => void;
+  onOpenAddQuest?: () => void;
 }
 
 export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
   quests,
   onContinueQuest,
-  onViewAll
+  onViewAll,
+  onOpenAddQuest
 }) => {
   const renderQuestIcon = (title: string, category: Quest['category']) => {
     const t = title.toLowerCase();
@@ -96,25 +100,71 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
     <div className="w-full rounded-2xl p-5 bg-[#090b1c]/90 border border-purple-900/40 shadow-2xl backdrop-blur-xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xs sm:text-sm font-bold tracking-widest text-slate-300 uppercase font-sans">
-          ACTIVE QUESTS
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-xs sm:text-sm font-bold tracking-widest text-slate-300 uppercase font-sans">
+            ACTIVE QUESTS
+          </h2>
+          <span className="px-2 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/40 text-[10px] font-black">
+            {quests.length}
+          </span>
+        </div>
         {onViewAll && (
           <button
             onClick={() => {
               soundFx.playClick();
               onViewAll();
             }}
-            className="flex items-center gap-1 text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors"
+            className="flex items-center gap-1 text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors cursor-pointer"
           >
-            <span>View All</span>
+            <span>View Board</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
 
-      {/* Quest Cards List */}
-      <div className="space-y-3.5">
+      {quests.length === 0 ? (
+        <div className="rounded-xl p-6 bg-gradient-to-b from-[#140a28]/80 to-[#0c0519]/90 border border-purple-800/40 text-center flex flex-col items-center justify-center space-y-3 shadow-inner">
+          <div className="w-12 h-12 rounded-2xl bg-purple-950/80 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+            <Sparkles className="w-6 h-6 text-purple-400 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
+          </div>
+          <div>
+            <h3 className="font-sans text-sm font-bold text-white tracking-wide">
+              No Active Quests Tracked
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+              Your active quest list is at zero. Accept a quest from the Quest Board or forge a new personal trial to begin!
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            {onViewAll && (
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  onViewAll();
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(168,85,247,0.4)] flex items-center gap-1.5 cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Browse Quest Board</span>
+              </button>
+            )}
+            {onOpenAddQuest && (
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  onOpenAddQuest();
+                }}
+                className="px-3 py-1.5 rounded-xl bg-[#1d1033] hover:bg-[#281545] border border-purple-500/40 text-purple-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Create Quest</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Quest Cards List */
+        <div className="space-y-3.5">
         {quests.map((quest) => {
           const style = getCardStyling(quest.category);
           const isCompleted = quest.progress >= 100;
@@ -158,13 +208,19 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
                 </span>
               </div>
 
-              {/* Rewards Row */}
-              <div className="flex items-center gap-3 mt-3 text-xs relative z-10 font-bold">
+              {/* Rewards Row with Energy Cost & Attribute Domain */}
+              <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 mt-3 text-xs relative z-10 font-bold">
                 <span className="text-purple-300 flex items-center gap-1">
                   <span className="text-purple-400">✦</span> +{quest.xpReward} XP
                 </span>
                 <span className="text-amber-300 flex items-center gap-1">
                   <span className="text-amber-400">★</span> +{quest.goldReward} Gold
+                </span>
+                <span className="text-cyan-300 flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-[11px]">
+                  <Zap className="w-3 h-3 fill-cyan-400 text-cyan-400" /> -{quest.energyCost || 10} Energy
+                </span>
+                <span className="text-indigo-300 flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-950/60 border border-purple-800/40 text-[10px] uppercase tracking-wider">
+                  +{quest.attribute}
                 </span>
               </div>
 
@@ -215,7 +271,8 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

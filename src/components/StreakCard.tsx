@@ -42,7 +42,7 @@ export const StreakCard: React.FC<StreakCardProps> = ({
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-black text-white font-cinzel tracking-wider drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)]">
-                {streakDays} DAYS
+                {streakDays} {streakDays === 1 ? 'DAY' : 'DAYS'}
               </span>
             </div>
           </div>

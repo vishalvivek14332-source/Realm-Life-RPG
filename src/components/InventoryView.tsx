@@ -381,7 +381,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                     soundFx.playClick();
                     setSelectedItemId(item.id);
                   }}
-                  className={`relative rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 group min-h-[160px] ${getCardBorderStyle(item.rarity, isSelected)}`}
+                  className={`relative rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 group min-h-[160px] ${getCardBorderStyle(item.rarity, isSelected)} ${item.quantity === 0 && !item.equipped ? 'opacity-65 hover:opacity-95 bg-[#080512]/60' : ''}`}
                 >
                   {/* Top: Rarity Badge on Right */}
                   <div className="flex justify-end w-full mb-1">
@@ -401,8 +401,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                       {item.name}
                     </h4>
 
-                    <div className="text-[11px] font-semibold text-slate-400 mt-0.5">
-                      x{item.quantity}
+                    <div className="text-[11px] font-semibold mt-0.5">
+                      {item.quantity > 0 ? (
+                        <span className="text-purple-300 font-sans font-bold">x{item.quantity}</span>
+                      ) : (
+                        <span className="text-slate-500 font-sans text-[10px]">x0 (Unowned)</span>
+                      )}
                     </div>
 
                     <p className="text-[10px] text-slate-300/80 leading-tight mt-1 line-clamp-2 h-7 flex items-center justify-center">
@@ -488,40 +492,67 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
             {/* Quantity */}
             <div className="text-xs font-bold text-slate-400">
-              Quantity: <span className="text-white font-sans">{selectedItem.quantity}</span>
+              Quantity: {selectedItem.quantity > 0 ? (
+                <span className="text-emerald-300 font-sans font-bold">{selectedItem.quantity} (In Vault)</span>
+              ) : (
+                <span className="text-rose-400 font-sans font-bold">0 (Not Owned — Complete Quests to Loot)</span>
+              )}
             </div>
 
             {/* Action Buttons: Equip / Consume + Sell for Gold */}
             <div className="space-y-2.5 pt-1">
               {/* Primary Button */}
-              <button
-                onClick={() => {
-                  soundFx.playCelebration();
-                  onUseItem(selectedItem.id);
-                }}
-                className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
-                  selectedItem.equipped 
-                    ? 'bg-emerald-800 hover:bg-emerald-700 text-white border border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                    : 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 hover:from-purple-700 hover:to-indigo-700 text-white border border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.5)]'
-                }`}
-              >
-                {selectedItem.type === 'equipment' ? (
-                  <>
-                    <Package className="w-4 h-4" />
-                    <span>{selectedItem.equipped ? 'Equipped (Active)' : 'Equip'}</span>
-                  </>
-                ) : selectedItem.type === 'potion' ? (
-                  <>
-                    <Flask className="w-4 h-4" />
-                    <span>Drink / Consume</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Use Item</span>
-                  </>
-                )}
-              </button>
+              {selectedItem.type === 'equipment' ? (
+                <button
+                  disabled={selectedItem.quantity <= 0 && !selectedItem.equipped}
+                  onClick={() => {
+                    if (selectedItem.quantity <= 0 && !selectedItem.equipped) {
+                      soundFx.playClick();
+                      showToast(`You do not own "${selectedItem.name}" yet! Complete quests to loot it.`);
+                      return;
+                    }
+                    soundFx.playCelebration();
+                    onUseItem(selectedItem.id);
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
+                    selectedItem.equipped 
+                      ? 'bg-emerald-800 hover:bg-emerald-700 text-white border border-emerald-400/60 shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer'
+                      : selectedItem.quantity > 0
+                      ? 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 hover:from-purple-700 hover:to-indigo-700 text-white border border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.5)] cursor-pointer'
+                      : 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>
+                    {selectedItem.equipped 
+                      ? 'Equipped (Active)' 
+                      : selectedItem.quantity > 0 
+                      ? 'Equip' 
+                      : 'Not Owned (Cannot Equip)'}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  disabled={selectedItem.quantity <= 0}
+                  onClick={() => {
+                    if (selectedItem.quantity <= 0) {
+                      soundFx.playClick();
+                      showToast(`None left in vault! Complete quests to loot "${selectedItem.name}".`);
+                      return;
+                    }
+                    soundFx.playCelebration();
+                    onUseItem(selectedItem.id);
+                  }}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
+                    selectedItem.quantity > 0
+                      ? 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 hover:from-purple-700 hover:to-indigo-700 text-white border border-purple-400/60 shadow-[0_0_18px_rgba(168,85,247,0.5)] cursor-pointer'
+                      : 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  {selectedItem.type === 'potion' ? <Flask className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>{selectedItem.quantity > 0 ? (selectedItem.type === 'potion' ? 'Drink / Consume' : 'Use Item') : 'Depleted (0 Charges)'}</span>
+                </button>
+              )}
 
               {/* Sell for Gold Button */}
               <button

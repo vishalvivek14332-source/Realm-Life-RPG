@@ -110,6 +110,14 @@ class SoundManager {
       });
     } catch {}
   }
+
+  public playCelebration(): void {
+    this.playLevelUp();
+  }
+
+  public playAchievementUnlock(): void {
+    this.playQuestComplete();
+  }
 }
 
 export const soundFx = new SoundManager();

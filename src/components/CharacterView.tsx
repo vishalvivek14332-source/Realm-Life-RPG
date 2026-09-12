@@ -23,7 +23,8 @@ import {
   User, 
   Trophy, 
   SunMedium,
-  Check
+  Check,
+  Plus
 } from 'lucide-react';
 import { soundFx } from '../sound';
 import heroShadowBanner from '../assets/images/hero_shadow_banner_1789201471184.jpg';
@@ -48,6 +49,7 @@ interface CharacterViewProps {
   showToast: (message: string) => void;
   onOpenInventory: () => void;
   onOpenAchievements: () => void;
+  onRest?: () => void;
 }
 
 export const CharacterView: React.FC<CharacterViewProps> = ({
@@ -61,7 +63,8 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
   achievements,
   showToast,
   onOpenInventory,
-  onOpenAchievements
+  onOpenAchievements,
+  onRest
 }) => {
   // Character states
   const [characterName, setCharacterName] = useState(profile.name);
@@ -91,6 +94,15 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
 
   const xpNeeded = Math.max(0, profile.maxXP - profile.currentXP);
   const xpPercent = Math.min(100, Math.round((profile.currentXP / profile.maxXP) * 100));
+  const strVal = attributes.find(a => a.id === 'strength')?.current || 10;
+  const intVal = attributes.find(a => a.id === 'intellect')?.current || 10;
+  const wisVal = attributes.find(a => a.id === 'wisdom')?.current || 10;
+  const disVal = attributes.find(a => a.id === 'discipline')?.current || 10;
+  const vitVal = attributes.find(a => a.id === 'vitality')?.current || 10;
+
+  const dynamicFocus = Math.min(100, Math.round(50 + (intVal + wisVal) * 1.1));
+  const dynamicResilience = Math.min(100, Math.round(50 + (disVal + vitVal) * 1.1));
+  const dynamicLuck = Math.min(100, Math.round(50 + wisVal * 1.3));
   const completedQuestsCount = quests.filter(q => q.completed).length;
   const unlockedAchievementsCount = achievements.filter(a => a.unlocked).length;
 
@@ -463,24 +475,28 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
             {/* 5 Horizontal Stat Badges */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {/* Health */}
-              <div className="rounded-xl px-4 py-3 bg-[#0c061d]/90 border border-purple-900/40 flex items-center gap-3 shadow-md hover:border-rose-500/40 transition-colors">
+              <div className={`rounded-xl px-4 py-3 bg-[#0c061d]/90 border ${
+                profile.health <= 25 ? 'border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse' : 'border-rose-900/50 hover:border-rose-500/60'
+              } flex items-center gap-3 shadow-md transition-colors`}>
                 <div className="w-8 h-8 rounded-lg bg-rose-950/60 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
                   <Heart className="w-4 h-4 fill-rose-500" />
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Health</span>
-                  <span className="text-xs font-black text-white font-sans">100 / 100</span>
+                  <span className="text-xs font-black text-rose-300 font-sans">{profile.health} / {profile.maxHealth}</span>
                 </div>
               </div>
 
               {/* Energy */}
-              <div className="rounded-xl px-4 py-3 bg-[#0c061d]/90 border border-purple-900/40 flex items-center gap-3 shadow-md hover:border-amber-500/40 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-                  <Zap className="w-4 h-4 fill-amber-400" />
+              <div className={`rounded-xl px-4 py-3 bg-[#0c061d]/90 border ${
+                profile.energy === 0 ? 'border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse' : 'border-cyan-900/50 hover:border-cyan-500/60'
+              } flex items-center gap-3 shadow-md transition-colors`}>
+                <div className="w-8 h-8 rounded-lg bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0">
+                  <Zap className="w-4 h-4 fill-cyan-400 text-cyan-400" />
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Energy</span>
-                  <span className="text-xs font-black text-white font-sans">85 / 100</span>
+                  <span className="text-xs font-black text-cyan-200 font-sans">{profile.energy} / {profile.maxEnergy}</span>
                 </div>
               </div>
 
@@ -491,7 +507,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Focus</span>
-                  <span className="text-xs font-black text-white font-sans">78 / 100</span>
+                  <span className="text-xs font-black text-purple-200 font-sans">{dynamicFocus} / 100</span>
                 </div>
               </div>
 
@@ -502,7 +518,7 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Resilience</span>
-                  <span className="text-xs font-black text-white font-sans">72 / 100</span>
+                  <span className="text-xs font-black text-sky-300 font-sans">{dynamicResilience} / 100</span>
                 </div>
               </div>
 
@@ -513,10 +529,34 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Luck</span>
-                  <span className="text-xs font-black text-white font-sans">64 / 100</span>
+                  <span className="text-xs font-black text-amber-300 font-sans">{dynamicLuck} / 100</span>
                 </div>
               </div>
             </div>
+
+            {/* Rest & Meditation Recovery Callout */}
+            {onRest && (
+              <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 via-[#100828] to-cyan-950/40 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-900/60 border border-purple-400/60 flex items-center justify-center text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+                    <SunMedium className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white tracking-wide">Campfire Rest & Meditation</h4>
+                    <p className="text-[11px] text-slate-300">Take a conscious pause to replenish +35 Energy and +20 Health.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    soundFx.playLevelUp();
+                    onRest();
+                  }}
+                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md hover:scale-105 transition-all cursor-pointer shrink-0"
+                >
+                  Rest Now
+                </button>
+              </div>
+            )}
           </div>
 
         </div>

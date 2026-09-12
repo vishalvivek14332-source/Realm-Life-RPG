@@ -6,7 +6,10 @@ import {
   Volume2, 
   VolumeX, 
   Menu,
-  Settings
+  Settings,
+  Heart,
+  Zap,
+  Moon
 } from 'lucide-react';
 import { CharacterProfile } from '../types';
 import { soundFx } from '../sound';
@@ -23,6 +26,7 @@ interface TopHeaderProps {
   onProfileClick: () => void;
   onNotificationsClick: () => void;
   onSettingsClick?: () => void;
+  onRest?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -35,7 +39,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   setMobileOpen,
   onProfileClick,
   onNotificationsClick,
-  onSettingsClick
+  onSettingsClick,
+  onRest
 }) => {
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -100,6 +105,72 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         {/* Right Badges & Controls */}
         <div className="flex flex-col items-end">
           <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Health (HP) Badge */}
+            <div 
+              id="header-hp-badge"
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#1d060e]/90 border ${
+                profile.health <= 25 ? 'border-rose-500 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]' : 'border-rose-600/50 shadow-[0_0_12px_rgba(244,63,94,0.2)]'
+              } cursor-default transition-transform hover:scale-105`}
+              title={`Health: ${profile.health} / ${profile.maxHealth} HP ${profile.health <= 25 ? '(Critical Burnout / Rest Needed!)' : ''}`}
+            >
+              <div className="w-6 h-6 rounded-lg bg-rose-950/80 border border-rose-500/60 flex items-center justify-center text-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]">
+                <Heart className="w-3.5 h-3.5 fill-rose-500" />
+              </div>
+              <div className="flex flex-col leading-tight min-w-[42px]">
+                <div className="flex items-center justify-between text-xs font-black text-rose-300 font-sans">
+                  <span>{profile.health}</span>
+                  <span className="text-[9px] text-rose-400/70 font-normal">/{profile.maxHealth}</span>
+                </div>
+                <div className="w-full h-1 bg-rose-950 rounded-full overflow-hidden mt-0.5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full" 
+                    style={{ width: `${Math.min(100, Math.round((profile.health / profile.maxHealth) * 100))}%` }} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Energy (Stamina) Badge */}
+            <div 
+              id="header-energy-badge"
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-xl bg-[#03151f]/90 border ${
+                profile.energy === 0 ? 'border-amber-500 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 'border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+              } cursor-default transition-transform hover:scale-105`}
+              title={`Energy: ${profile.energy} / ${profile.maxEnergy} Stamina ${profile.energy === 0 ? '(Exhausted! Burning Health on quests!)' : ''}`}
+            >
+              <div className="w-6 h-6 rounded-lg bg-cyan-950/80 border border-cyan-500/60 flex items-center justify-center text-cyan-300 shadow-[0_0_8px_rgba(6,182,212,0.6)]">
+                <Zap className="w-3.5 h-3.5 fill-cyan-400 text-cyan-400" />
+              </div>
+              <div className="flex flex-col leading-tight min-w-[42px]">
+                <div className="flex items-center justify-between text-xs font-black text-cyan-200 font-sans">
+                  <span>{profile.energy}</span>
+                  <span className="text-[9px] text-cyan-400/70 font-normal">/{profile.maxEnergy}</span>
+                </div>
+                <div className="w-full h-1 bg-cyan-950 rounded-full overflow-hidden mt-0.5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400 rounded-full" 
+                    style={{ width: `${Math.min(100, Math.round((profile.energy / profile.maxEnergy) * 100))}%` }} 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Rest / Recovery Button */}
+            {onRest && (
+              <button
+                id="header-rest-button"
+                onClick={() => {
+                  soundFx.playClick();
+                  onRest();
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#120a28]/90 hover:bg-purple-900/60 border border-purple-500/50 hover:border-purple-400 text-purple-200 transition-all cursor-pointer shadow-md text-xs font-bold"
+                title="Take a Campfire Rest (+35 Energy, +20 HP)"
+              >
+                <Moon className="w-3.5 h-3.5 text-purple-300" />
+                <span className="hidden xl:inline text-[10px] tracking-wide">Rest</span>
+              </button>
+            )}
+
             {/* Gold Coin Badge */}
             <div 
               id="header-gold-badge"
