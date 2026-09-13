@@ -236,6 +236,22 @@ export default function App() {
     loadGameData();
   }, [loadGameData]);
 
+  // Global listener for session expiry dispatched from api client
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setProfile(guestProfile);
+      setIsAuthModalOpen(true);
+      showToast("Session expired. Please log in to continue your journey.");
+    };
+
+    window.addEventListener('realm:auth_expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('realm:auth_expired', handleAuthExpired);
+    };
+  }, []);
+
   // Take a Campfire Rest / Meditate to recover Health & Energy via backend API (1-time daily limit)
   const handleRest = async () => {
     if (profile.canRestToday === false) {

@@ -5,6 +5,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { ENV } from './config/env.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
+import { checkDatabaseHealth } from './prisma.js';
+import { createRateLimiter } from './middleware/rateLimitMiddleware.js';
 
 import authRoutes from './routes/authRoutes.js';
 import characterRoutes from './routes/characterRoutes.js';
@@ -19,7 +21,18 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// CORS setup - supports local development and unified single-origin production
+// 1. Security Headers (Defend against sniffing, clickjacking, and XSS)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  if (ENV.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// 2. CORS setup - supports local development and unified single-origin production
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -40,22 +53,34 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body parsing middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 3. Body parsing middleware
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
-// Health check endpoints
-app.get(['/health', '/api/health'], (req: Request, res: Response) => {
-  res.status(200).json({
-    status: 'online',
+// 4. Real-time Diagnostic Health check endpoint (probes Supabase DB connection)
+app.get(['/health', '/api/health'], async (req: Request, res: Response) => {
+  const dbHealth = await checkDatabaseHealth();
+  const isHealthy = dbHealth.connected;
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'online' : 'degraded',
     realm: 'REALM RPG Unified Service',
     environment: ENV.NODE_ENV,
+    database: dbHealth.connected ? 'connected' : 'disconnected',
+    dbLatencyMs: dbHealth.latencyMs,
+    error: dbHealth.error,
     timestamp: new Date().toISOString()
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
+// 5. Anti-brute-force Rate Limiting for Auth Gateway (30 requests / 5 mins per IP)
+const authLimiter = createRateLimiter(
+  5 * 60 * 1000,
+  30,
+  'The Realm gates detect too many attempts. Please pause for a few minutes before trying again.'
+);
+
+// 6. API Routes
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/character', characterRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/inventory', inventoryRoutes);

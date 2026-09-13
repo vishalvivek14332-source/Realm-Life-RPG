@@ -36,10 +36,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
     try {
       if (mode === 'register') {
-        if (!username.trim()) {
-          throw new Error('Please inscribe your adventurer name.');
+        const cleanUsername = username.trim();
+        const cleanEmail = email.trim();
+        if (!cleanUsername || cleanUsername.length < 3) {
+          throw new Error('Adventurer name must be at least 3 runes/characters.');
         }
-        const res = await authApi.register({ username, email, password });
+        if (!cleanEmail) {
+          throw new Error('Codex email address is required.');
+        }
+        if (password.length < 6) {
+          throw new Error('Passphrase must be at least 6 runes/characters.');
+        }
+        const res = await authApi.register({ username: cleanUsername, email: cleanEmail, password });
         if (res.data?.token) {
           setToken(res.data.token);
           soundFx.playCelebration();
@@ -47,7 +55,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           onClose?.();
         }
       } else {
-        const res = await authApi.login({ email, password });
+        const cleanEmail = email.trim();
+        if (!cleanEmail) {
+          throw new Error('Please provide your Hero Name or Email.');
+        }
+        if (!password) {
+          throw new Error('Please enter your secret passphrase.');
+        }
+        const res = await authApi.login({ email: cleanEmail, password });
         if (res.data?.token) {
           setToken(res.data.token);
           soundFx.playCelebration();
@@ -231,6 +246,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                 className="w-full pl-10 pr-4 py-2.5 bg-[#080914] border border-purple-900/50 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition-all"
               />
             </div>
+            {mode === 'register' && password.length > 0 && password.length < 6 && (
+              <p className="text-[10px] text-amber-400/90 pl-1 pt-0.5">
+                ✦ Minimum 6 characters required ({password.length}/6)
+              </p>
+            )}
           </div>
 
           <button

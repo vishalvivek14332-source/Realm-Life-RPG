@@ -395,4 +395,29 @@ export class AuthController {
       next(err);
     }
   }
+
+  static async logout(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (req.user?.id) {
+        // Optional departure activity log
+        await prisma.activityLog.create({
+          data: {
+            userId: req.user.id,
+            type: 'quest_complete',
+            title: 'Departed the Realm',
+            description: `${req.user.username} saved their journey and rested outside the gates.`,
+            xp: 0,
+            gold: 0
+          }
+        }).catch(() => null);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Departed the Realm. Safe travels until your return, adventurer!'
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
