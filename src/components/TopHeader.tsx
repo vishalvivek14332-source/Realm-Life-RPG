@@ -9,7 +9,9 @@ import {
   Settings,
   Heart,
   Zap,
-  Moon
+  Moon,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { CharacterProfile } from '../types';
 import { soundFx } from '../sound';
@@ -27,6 +29,9 @@ interface TopHeaderProps {
   onNotificationsClick: () => void;
   onSettingsClick?: () => void;
   onRest?: () => void;
+  isAuthenticated?: boolean;
+  onOpenAuth?: () => void;
+  onLogout?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -40,7 +45,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onProfileClick,
   onNotificationsClick,
   onSettingsClick,
-  onRest
+  onRest,
+  isAuthenticated,
+  onOpenAuth,
+  onLogout
 }) => {
   const toggleSound = () => {
     const next = !soundEnabled;
@@ -159,15 +167,32 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             {onRest && (
               <button
                 id="header-rest-button"
+                disabled={profile.canRestToday === false}
                 onClick={() => {
+                  if (profile.canRestToday === false) return;
                   soundFx.playClick();
                   onRest();
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#120a28]/90 hover:bg-purple-900/60 border border-purple-500/50 hover:border-purple-400 text-purple-200 transition-all cursor-pointer shadow-md text-xs font-bold"
-                title="Take a Campfire Rest (+35 Energy, +20 HP)"
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border transition-all text-xs font-bold ${
+                  profile.canRestToday === false
+                    ? 'bg-[#0e0a1a]/70 border-purple-950/40 text-slate-500 cursor-not-allowed opacity-60'
+                    : 'bg-[#120a28]/90 hover:bg-purple-900/60 border-purple-500/50 hover:border-purple-400 text-purple-200 cursor-pointer shadow-md'
+                }`}
+                title={
+                  profile.canRestToday === false
+                    ? "Campfire Embers Cooled (1/1 used today). You can rest once per day! Consume potions or return tomorrow."
+                    : "Take a Campfire Rest (+35 Energy, +20 HP) [Daily: 1 use]"
+                }
               >
-                <Moon className="w-3.5 h-3.5 text-purple-300" />
-                <span className="hidden xl:inline text-[10px] tracking-wide">Rest</span>
+                <Moon className={`w-3.5 h-3.5 ${profile.canRestToday === false ? 'text-slate-500' : 'text-purple-300'}`} />
+                <span className="hidden xl:inline text-[10px] tracking-wide">
+                  {profile.canRestToday === false ? 'Rested' : 'Rest'}
+                </span>
+                <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                  profile.canRestToday === false ? 'bg-purple-950/40 text-slate-500' : 'bg-purple-900/60 text-purple-300'
+                }`}>
+                  {profile.canRestToday === false ? '0/1' : '1/1'}
+                </span>
               </button>
             )}
 
@@ -192,18 +217,24 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <div 
               id="header-xp-badge"
               className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#170926]/90 border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.25)] cursor-default transition-transform hover:scale-105"
-              title="Current Experience"
+              title={`Level ${profile.level} Experience: ${profile.currentXP} / ${profile.maxXP} XP (${profile.maxXP - profile.currentXP} XP to Level ${profile.level + 1}) · Total XP: ${(profile.totalXP || profile.currentXP).toLocaleString()}`}
             >
               <div className="w-6 h-6 rounded-lg bg-purple-900/60 border border-purple-400/60 flex items-center justify-center text-purple-300 shadow-[0_0_8px_rgba(168,85,247,0.6)]">
                 <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-purple-300 drop-shadow-[0_0_6px_rgba(192,132,252,0.8)]">
                   <polygon points="12,2 22,8.5 12,22 2,8.5" />
                 </svg>
               </div>
-              <div className="flex flex-col leading-tight">
-                <span className="text-xs font-black text-purple-200 font-sans">
-                  {profile.currentXP.toLocaleString()}
-                </span>
-                <span className="text-[9px] text-purple-300/80 font-medium">XP</span>
+              <div className="flex flex-col leading-tight min-w-[50px]">
+                <div className="flex items-center justify-between text-xs font-black text-purple-200 font-sans">
+                  <span>{profile.currentXP.toLocaleString()}</span>
+                  <span className="text-[9px] text-purple-400/80 font-normal">/{profile.maxXP.toLocaleString()}</span>
+                </div>
+                <div className="w-full h-1 bg-purple-950 rounded-full overflow-hidden mt-0.5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-400 rounded-full shadow-[0_0_6px_rgba(168,85,247,0.8)] transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.max(0, Math.round(((profile.currentXP || 0) / Math.max(1, profile.maxXP || 100)) * 100)))}%` }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -303,6 +334,35 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             >
               <Settings className="w-4 h-4" />
             </button>
+
+            {/* Auth / Logout Button */}
+            {isAuthenticated ? (
+              <button
+                id="header-logout-button"
+                onClick={() => {
+                  soundFx.playClick();
+                  if (onLogout) onLogout();
+                }}
+                className="p-2 text-rose-300 hover:text-white bg-[#1a0812]/90 hover:bg-rose-950/60 rounded-xl border border-rose-900/50 hover:border-rose-500/60 transition-all cursor-pointer shadow-md"
+                aria-label="Depart Realm (Log Out)"
+                title="Depart Realm (Log Out)"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                id="header-login-button"
+                onClick={() => {
+                  soundFx.playClick();
+                  if (onOpenAuth) onOpenAuth();
+                }}
+                className="p-2 text-purple-300 hover:text-white bg-[#150a28]/90 hover:bg-purple-900/60 rounded-xl border border-purple-500/50 hover:border-purple-400 transition-all cursor-pointer shadow-md"
+                aria-label="Enter Realm (Sign In)"
+                title="Enter Realm (Sign In)"
+              >
+                <LogIn className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           {/* Sub-quote on right under badges: “SAME PERSON. HIGHER STANDARDS.” */}

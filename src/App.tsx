@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
 import { HeroBanner } from './components/HeroBanner';
@@ -21,6 +21,7 @@ import { AchievementsView } from './components/AchievementsView';
 import { SettingsView } from './components/SettingsView';
 import { LevelUpCelebration } from './components/LevelUpCelebration';
 import { QuestRewardModal } from './components/QuestRewardModal';
+import { AuthModal } from './components/AuthModal';
 import { 
   initialProfile, 
   initialAttributes, 
@@ -31,9 +32,25 @@ import {
 } from './data';
 import { Quest, AttributeType } from './types';
 import { soundFx } from './sound';
-import { Sparkles, CheckCircle, Bell } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import {
+  authApi,
+  characterApi,
+  questApi,
+  inventoryApi,
+  achievementApi,
+  streakApi,
+  activityApi,
+  getToken,
+  removeToken
+} from './services/api';
 
 export default function App() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(getToken()));
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(!getToken());
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   // Core game state
   const [profile, setProfile] = useState(initialProfile);
   const [attributes, setAttributes] = useState(initialAttributes);
@@ -42,7 +59,7 @@ export default function App() {
   const [inventory, setInventory] = useState(initialInventory);
   const [achievements, setAchievements] = useState(initialAchievements);
 
-  // 7-day streak tracker (Mon - Sun, matches reference image where Sun is open today)
+  // 7-day streak tracker (Mon - Sun)
   const [streakWeek, setStreakWeek] = useState([
     { day: 'Mon', checked: true },
     { day: 'Tue', checked: false },
@@ -105,378 +122,287 @@ export default function App() {
     }, 3500);
   };
 
-  // Take a Campfire Rest / Meditate to recover Health & Energy
-  const handleRest = () => {
-    soundFx.playLevelUp();
+  // Helper to sync authoritative character profile and attributes from backend
+  const updateProfileAndStats = useCallback((charData: any, userData?: any, streakData?: any) => {
+    if (!charData) return;
     setProfile(prev => {
-      const nextEnergy = Math.min(prev.maxEnergy, prev.energy + 35);
-      const nextHealth = Math.min(prev.maxHealth, prev.health + 20);
+      const addedXp = charData._addedXp || 0;
+      const nextTotal = charData.totalXP ?? (charData.totalXp ?? ((prev.totalXP || 0) + addedXp));
       return {
         ...prev,
-        energy: nextEnergy,
-        health: nextHealth
+        name: userData?.username || prev.name,
+        level: charData.level ?? prev.level,
+        health: charData.health ?? prev.health,
+        maxHealth: charData.maxHealth ?? prev.maxHealth,
+        energy: charData.energy ?? prev.energy,
+        maxEnergy: charData.maxEnergy ?? prev.maxEnergy,
+        currentXP: charData.xp ?? prev.currentXP,
+        maxXP: charData.requiredXp ?? prev.maxXP,
+        gold: charData.gold ?? prev.gold,
+        totalXP: nextTotal,
+        streakDays: streakData?.currentStreak ?? (prev.streakDays || 1),
+        canRestToday: charData.canRestToday !== undefined ? charData.canRestToday : prev.canRestToday
       };
     });
-    showToast("🌙 Campfire Rest: Restored +35 Energy and +20 Health!");
-  };
 
-  // Award quest loot drop
-  const awardQuestLoot = (quest: Quest) => {
-    let candidateIds: string[] = [];
+    setAttributes(prev => prev.map(attr => {
+      const val = charData[attr.id];
+      if (typeof val === 'number') {
+        return { ...attr, current: val };
+      }
+      return attr;
+    }));
+  }, []);
 
-    if (quest.attribute === 'strength' || quest.category === 'HEALTH') {
-      candidateIds = ['health_potion', 'energy_bar', 'vitality_leaf'];
-    } else if (quest.attribute === 'intellect' || quest.category === 'STUDY' || quest.category === 'WORK') {
-      candidateIds = ['focus_potion', 'productivity_brew', 'knowledge_tome'];
-    } else if (quest.attribute === 'wisdom' || quest.category === 'PERSONAL') {
-      candidateIds = ['clarity_crystal', 'ancient_scroll', 'explorers_compass'];
-    } else if (quest.attribute === 'discipline' || quest.category === 'DISCIPLINE') {
-      candidateIds = ['productivity_brew', 'iron_token', 'time_shard'];
-    } else {
-      candidateIds = ['energy_bar', 'health_potion', 'focus_potion'];
-    }
-
-    const lootId = candidateIds[Math.floor(Math.random() * candidateIds.length)];
-    const targetItem = inventory.find(i => i.id === lootId);
-
-    if (targetItem) {
-      setInventory(prev => prev.map(item => {
-        if (item.id === lootId) {
-          return { ...item, quantity: item.quantity + 1 };
-        }
-        return item;
-      }));
-
-      setActivities(acts => [
-        {
-          id: `act-${Date.now()}-loot`,
-          type: 'item_acquired',
-          title: `Acquired: +1 ${targetItem.name}`,
-          timeAgo: 'Just now',
-          timestamp: Date.now()
-        },
-        ...acts
+  // Background fetcher for ancillary data (inventory, achievements, activity)
+  const refreshBackgroundData = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const [invRes, achRes, actRes] = await Promise.all([
+        inventoryApi.getInventory().catch(() => null),
+        achievementApi.getAchievements().catch(() => null),
+        activityApi.getActivity().catch(() => null)
       ]);
+      if (invRes?.success && Array.isArray(invRes.data?.items)) setInventory(invRes.data.items);
+      if (achRes?.success && Array.isArray(achRes.data)) setAchievements(achRes.data);
+      if (actRes?.success && Array.isArray(actRes.data)) setActivities(actRes.data);
+    } catch (_) {}
+  }, []);
 
-      return targetItem;
+  // Primary loader to fetch all data from real backend database
+  const loadGameData = useCallback(async () => {
+    if (!getToken()) {
+      setIsAuthModalOpen(true);
+      return;
     }
-    return null;
+
+    try {
+      // 1. Get Me & Character
+      const meRes = await authApi.getMe();
+      if (meRes.success && meRes.data) {
+        setIsAuthenticated(true);
+        setCurrentUser(meRes.data.user);
+        updateProfileAndStats(meRes.data.character, meRes.data.user, meRes.data.streak);
+      }
+
+      // 2. Fetch Quests & Normalize active/completed flags
+      const questsRes = await questApi.getQuests().catch(() => null);
+      if (questsRes?.success && Array.isArray(questsRes.data)) {
+        const normalized = questsRes.data.map((q: any) => ({
+          ...q,
+          active: q.status !== 'COMPLETED',
+          completed: q.status === 'COMPLETED' || q.progress >= 100
+        }));
+        setQuests(normalized);
+      }
+
+      // 3. Fetch Inventory
+      const invRes = await inventoryApi.getInventory().catch(() => null);
+      if (invRes?.success && Array.isArray(invRes.data?.items)) {
+        setInventory(invRes.data.items);
+      }
+
+      // 4. Fetch Achievements
+      const achRes = await achievementApi.getAchievements().catch(() => null);
+      if (achRes?.success && Array.isArray(achRes.data)) {
+        setAchievements(achRes.data);
+      }
+
+      // 5. Fetch Streak
+      const streakRes = await streakApi.getStreak().catch(() => null);
+      if (streakRes?.success && streakRes.data?.weekTracker) {
+        setStreakWeek(streakRes.data.weekTracker);
+      }
+
+      // 6. Fetch Activity
+      const actRes = await activityApi.getActivity().catch(() => null);
+      if (actRes?.success && Array.isArray(actRes.data)) {
+        setActivities(actRes.data);
+      }
+    } catch (err: any) {
+      if (err.status === 401) {
+        removeToken();
+        setIsAuthenticated(false);
+        setIsAuthModalOpen(true);
+      }
+    }
+  }, [updateProfileAndStats]);
+
+  useEffect(() => {
+    loadGameData();
+  }, [loadGameData]);
+
+  // Take a Campfire Rest / Meditate to recover Health & Energy via backend API (1-time daily limit)
+  const handleRest = async () => {
+    if (profile.canRestToday === false) {
+      soundFx.playClick();
+      showToast("⚠️ The campfire embers have cooled. You can only rest once per day!");
+      return;
+    }
+
+    try {
+      const res = await characterApi.rest();
+      if (res.success && res.data) {
+        soundFx.playLevelUp();
+        updateProfileAndStats({ ...res.data, canRestToday: false });
+        showToast(res.message || "🌙 Campfire Rest: Restored +35 Energy and +20 Health! (Daily rest completed)");
+        refreshBackgroundData();
+        return;
+      }
+    } catch (err: any) {
+      if (err?.errorCode === 'REST_ALREADY_USED' || err?.message?.includes('once per day')) {
+        setProfile(prev => ({ ...prev, canRestToday: false }));
+        showToast("⚠️ " + (err.message || "The campfire embers have cooled. You can only rest once per day!"));
+        return;
+      }
+      console.warn('Backend rest fallback:', err?.message);
+    }
+
+    setProfile(prev => ({
+      ...prev,
+      canRestToday: false,
+      health: Math.min(prev.maxHealth, prev.health + 20),
+      energy: Math.min(prev.maxEnergy, prev.energy + 35)
+    }));
+    soundFx.playLevelUp();
+    showToast("🌙 Campfire Rest: Restored +35 Energy and +20 Health! (Daily rest used)");
   };
 
-  // Handle continuing / progressing a quest with stamina & health exhaustion mechanics
-  const handleContinueQuest = (questId: string) => {
+  // Handle direct quest completion from Quest Details or Board
+  const handleCompleteQuestDirectly = async (questId: string) => {
     const targetQuest = quests.find(q => q.id === questId);
     if (!targetQuest) return;
 
-    // Strict guard: quest already completed or claimed
     if (targetQuest.completed || targetQuest.progress >= 100) {
       showToast(`Quest "${targetQuest.title}" has already been claimed!`);
       return;
     }
 
-    // Check if player has collapsed from exhaustion
-    if (profile.health <= 0) {
-      soundFx.playClick();
-      showToast("💀 Collapse! You have 0 HP and cannot quest. Rest or drink an elixir to recover!");
-      return;
+    const xpEarned = Number(targetQuest.xpReward) || 150;
+    const goldEarned = Number(targetQuest.goldReward) || 25;
+    const attrName = (targetQuest.attribute || 'discipline').toLowerCase();
+
+    try {
+      const res = await questApi.completeQuest(questId);
+      if (res.success && res.data) {
+        soundFx.playQuestComplete();
+        const { character, quest, rewards, progression } = res.data;
+
+        // Authoritatively update character profile & attributes with added XP
+        updateProfileAndStats({ ...character, _addedXp: rewards.xpEarned || xpEarned });
+
+        // Update quest list
+        setQuests(prev => prev.map(q => q.id === questId ? { ...q, progress: 100, completed: true, status: 'COMPLETED' } : q));
+
+        // Level-up celebration
+        if (progression?.didLevelUp) {
+          setTimeout(() => {
+            setLevelUpModal({ open: true, level: progression.newLevel });
+          }, 400);
+        }
+
+        // Open Quest Reward Modal celebration with authoritative droppedItem & rewards
+        setTimeout(() => {
+          setQuestRewardModal({
+            open: true,
+            questTitle: quest.title,
+            xpEarned: rewards.xpEarned,
+            goldEarned: rewards.goldEarned,
+            attributeType: rewards.attributeGained,
+            droppedItem: rewards.droppedItem ? {
+              name: rewards.droppedItem.name,
+              rarity: rewards.droppedItem.rarity,
+              image: rewards.droppedItem.image,
+              bonus: rewards.droppedItem.bonus
+            } : null,
+            bonusXP: rewards.bonusXp,
+            bonusGold: rewards.bonusGold
+          });
+        }, 200);
+
+        showToast(`Quest Complete: "${quest.title}"! +${rewards.xpEarned} XP, +${rewards.goldEarned} Gold, +1 ${rewards.attributeGained.toUpperCase()}!`);
+        refreshBackgroundData();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Backend completion fallback to local progression:', err?.message);
     }
 
-    // 1. Calculate step stamina energy cost (mitigated by Strength & Discipline attributes)
-    const rawCost = targetQuest.energyCost || 15;
-    let stepCost = Math.max(3, Math.round(rawCost * 0.4));
-    const strStat = attributes.find(a => a.id === 'strength')?.current || 10;
-    const disStat = attributes.find(a => a.id === 'discipline')?.current || 10;
+    // Local XP Awarding & Level Progression Guarantee
+    soundFx.playQuestComplete();
 
-    if (targetQuest.attribute === 'strength') {
-      stepCost = Math.max(2, Math.round(stepCost * (1 - Math.min(0.45, strStat / 150))));
-    }
-    stepCost = Math.max(2, Math.round(stepCost * (1 - Math.min(0.35, disStat / 200))));
+    // Mark quest completed
+    setQuests(prev => prev.map(q => q.id === questId ? { ...q, progress: 100, completed: true, status: 'COMPLETED' } : q));
 
-    // Deduct stamina or apply exhaustion health damage
-    let healthLoss = 0;
-    let staminaUsed = 0;
-
+    // Award XP, Gold, and check level up
     setProfile(prev => {
-      let nextEnergy = prev.energy;
-      let nextHealth = prev.health;
+      let curLevel = Math.max(1, prev.level);
+      let curXp = prev.currentXP + xpEarned;
+      let reqXp = prev.maxXP || Math.floor(100 * Math.pow(curLevel, 1.5));
+      let leveledUp = false;
 
-      if (nextEnergy >= stepCost) {
-        nextEnergy -= stepCost;
-        staminaUsed = stepCost;
-      } else {
-        const deficit = stepCost - nextEnergy;
-        staminaUsed = nextEnergy;
-        nextEnergy = 0;
-        healthLoss = Math.max(4, Math.round(deficit * 1.5));
-        nextHealth = Math.max(0, nextHealth - healthLoss);
+      while (curXp >= reqXp) {
+        curXp -= reqXp;
+        curLevel += 1;
+        reqXp = Math.floor(100 * Math.pow(curLevel, 1.5));
+        leveledUp = true;
+      }
+
+      if (leveledUp) {
+        setTimeout(() => {
+          setLevelUpModal({ open: true, level: curLevel });
+        }, 400);
       }
 
       return {
         ...prev,
-        energy: nextEnergy,
-        health: nextHealth
+        level: curLevel,
+        currentXP: curXp,
+        maxXP: reqXp,
+        totalXP: (prev.totalXP || 0) + xpEarned,
+        gold: prev.gold + goldEarned
       };
     });
 
-    soundFx.playQuestProgress();
+    // Award Attribute point
+    setAttributes(prev => prev.map(attr => 
+      attr.id.toLowerCase() === attrName || attr.name.toLowerCase() === attrName
+        ? { ...attr, current: Math.min(attr.max, attr.current + 1) }
+        : attr
+    ));
 
-    // Increment progress by 20%
-    const newProgress = Math.min(100, targetQuest.progress + 20);
-    const est = targetQuest.estimatedMinutes || 30;
-    const newMins = Math.round((est * newProgress) / 100);
-    const isNowCompleted = newProgress >= 100;
-
-    setQuests(prev => prev.map(q => {
-      if (q.id === questId) {
-        return { 
-          ...q, 
-          progress: newProgress,
-          currentMinutes: newMins,
-          completed: isNowCompleted
-        };
-      }
-      return q;
-    }));
-
-    if (isNowCompleted) {
-      soundFx.playQuestComplete();
-
-      // Calculate Intellect Critical Insight bonus (+25% XP chance)
-      const intStat = attributes.find(a => a.id === 'intellect')?.current || 10;
-      const insightProc = targetQuest.attribute === 'intellect' && (Math.random() < Math.min(0.7, intStat / 35));
-      const bonusXP = insightProc ? Math.round(targetQuest.xpReward * 0.25) : 0;
-      const finalXP = targetQuest.xpReward + bonusXP;
-
-      // Calculate Wisdom Bountiful Discovery bonus (+30% Gold chance)
-      const wisStat = attributes.find(a => a.id === 'wisdom')?.current || 10;
-      const discoveryProc = targetQuest.attribute === 'wisdom' && (Math.random() < Math.min(0.7, wisStat / 35));
-      const bonusGold = discoveryProc ? Math.round(targetQuest.goldReward * 0.3) : 0;
-      const finalGold = targetQuest.goldReward + bonusGold;
-
-      const bonusNote = (insightProc ? ' 🧠 Critical Insight (+25% XP)!' : '') + (discoveryProc ? ' 👁️ Bountiful Discovery (+30% Gold)!' : '');
-
-      const droppedItem = awardQuestLoot(targetQuest);
-      const lootNote = droppedItem ? ` 🎁 Loot: +1 ${droppedItem.name}!` : '';
-
-      if (healthLoss > 0) {
-        showToast(`⚠️ Exhaustion Strain (-${healthLoss} HP)! Quest Complete: ${targetQuest.title}! +${finalXP} XP, +${finalGold} Gold, +1 ${targetQuest.attribute.toUpperCase()}!${bonusNote}${lootNote}`);
-      } else {
-        showToast(`⚡ -${stepCost} Energy! Quest Complete: ${targetQuest.title}! +${finalXP} XP, +${finalGold} Gold, +1 ${targetQuest.attribute.toUpperCase()}!${bonusNote}${lootNote}`);
-      }
-
-      awardXPAndGold(finalXP, finalGold, targetQuest.attribute, targetQuest.title);
-
-      // Open Quest Reward Modal celebration
-      setTimeout(() => {
-        setQuestRewardModal({
-          open: true,
-          questTitle: targetQuest.title,
-          xpEarned: finalXP,
-          goldEarned: finalGold,
-          attributeType: targetQuest.attribute,
-          droppedItem: droppedItem ? {
-            name: droppedItem.name,
-            rarity: droppedItem.rarity,
-            image: droppedItem.image,
-            bonus: droppedItem.bonus
-          } : null,
-          bonusXP,
-          bonusGold
-        });
-      }, 200);
-    } else {
-      if (healthLoss > 0) {
-        showToast(`⚠️ Exhaustion! -${healthLoss} HP lost (0 Energy)! ${targetQuest.title} at ${newProgress}%! (${newMins}/${est} mins)`);
-      } else {
-        showToast(`⚡ -${stepCost} Energy | ${targetQuest.title} is now at ${newProgress}%! (${newMins}/${est} mins)`);
-      }
-    }
-  };
-
-  // Handle direct quest completion from Quest Details
-  const handleCompleteQuestDirectly = (questId: string) => {
-    const targetQuest = quests.find(q => q.id === questId);
-    if (!targetQuest) return;
-
-    if (targetQuest.completed || targetQuest.progress >= 100) {
-      showToast(`Quest "${targetQuest.title}" has already been claimed!`);
-      return;
-    }
-
-    if (profile.health <= 0) {
-      soundFx.playClick();
-      showToast("💀 Collapse! You have 0 HP and cannot quest. Rest or drink an elixir to recover!");
-      return;
-    }
-
-    // Direct completion energy cost
-    const fullCost = targetQuest.energyCost || 15;
-    let healthLoss = 0;
-
-    setProfile(prev => {
-      let nextEnergy = prev.energy;
-      let nextHealth = prev.health;
-
-      if (nextEnergy >= fullCost) {
-        nextEnergy -= fullCost;
-      } else {
-        const deficit = fullCost - nextEnergy;
-        nextEnergy = 0;
-        healthLoss = Math.max(6, Math.round(deficit * 1.5));
-        nextHealth = Math.max(0, nextHealth - healthLoss);
-      }
-
-      return { ...prev, energy: nextEnergy, health: nextHealth };
-    });
-
-    soundFx.playQuestComplete();
-    const est = targetQuest.estimatedMinutes || 30;
-
-    setQuests(prev => prev.map(q => {
-      if (q.id === questId) {
-        return { 
-          ...q, 
-          progress: 100,
-          currentMinutes: est,
-          completed: true 
-        };
-      }
-      return q;
-    }));
-
-    // Calculate bonuses
-    const intStat = attributes.find(a => a.id === 'intellect')?.current || 10;
-    const insightProc = targetQuest.attribute === 'intellect' && (Math.random() < Math.min(0.7, intStat / 35));
-    const bonusXP = insightProc ? Math.round(targetQuest.xpReward * 0.25) : 0;
-    const finalXP = targetQuest.xpReward + bonusXP;
-
-    const wisStat = attributes.find(a => a.id === 'wisdom')?.current || 10;
-    const discoveryProc = targetQuest.attribute === 'wisdom' && (Math.random() < Math.min(0.7, wisStat / 35));
-    const bonusGold = discoveryProc ? Math.round(targetQuest.goldReward * 0.3) : 0;
-    const finalGold = targetQuest.goldReward + bonusGold;
-
-    const bonusNote = (insightProc ? ' 🧠 Critical Insight (+25% XP)!' : '') + (discoveryProc ? ' 👁️ Bountiful Discovery (+30% Gold)!' : '');
-
-    const droppedItem = awardQuestLoot(targetQuest);
-    const lootNote = droppedItem ? ` 🎁 Loot: +1 ${droppedItem.name}!` : '';
-
-    if (healthLoss > 0) {
-      showToast(`⚠️ Exhaustion Strain (-${healthLoss} HP)! "${targetQuest.title}" completed! +${finalXP} XP, +${finalGold} Gold, +1 ${targetQuest.attribute.toUpperCase()}!${bonusNote}${lootNote}`);
-    } else {
-      showToast(`⚡ -${fullCost} Energy! "${targetQuest.title}" completed! +${finalXP} XP, +${finalGold} Gold, +1 ${targetQuest.attribute.toUpperCase()}!${bonusNote}${lootNote}`);
-    }
-
-    awardXPAndGold(finalXP, finalGold, targetQuest.attribute, targetQuest.title);
+    // Add activity log with valid fields
+    const newLog: RecentActivityItem = {
+      id: `act-${Date.now()}`,
+      title: `Completed: ${targetQuest.title}`,
+      type: 'completed_quest',
+      xp: xpEarned,
+      gold: goldEarned,
+      timeAgo: 'Just now',
+      timestamp: Date.now()
+    };
+    setActivities(prev => [newLog, ...prev]);
 
     // Open Quest Reward Modal celebration
     setTimeout(() => {
       setQuestRewardModal({
         open: true,
         questTitle: targetQuest.title,
-        xpEarned: finalXP,
-        goldEarned: finalGold,
-        attributeType: targetQuest.attribute,
-        droppedItem: droppedItem ? {
-          name: droppedItem.name,
-          rarity: droppedItem.rarity,
-          image: droppedItem.image,
-          bonus: droppedItem.bonus
-        } : null,
-        bonusXP,
-        bonusGold
+        xpEarned: xpEarned,
+        goldEarned: goldEarned,
+        attributeType: attrName,
+        droppedItem: null,
+        bonusXP: 0,
+        bonusGold: 0
       });
     }, 200);
+
+    showToast(`Quest Complete: "${targetQuest.title}"! +${xpEarned} XP, +${goldEarned} Gold!`);
   };
 
-  // Award XP and Gold logic + leveling
-  const awardXPAndGold = (xp: number, gold: number, attrType?: AttributeType, questTitle?: string) => {
-    setProfile(prev => {
-      const nextXP = prev.currentXP + xp;
-      const nextTotalXP = prev.totalXP + xp;
-      const nextGold = prev.gold + gold;
-
-      // Check level up
-      if (nextXP >= prev.maxXP) {
-        const newLevel = prev.level + 1;
-        const remainingXP = nextXP - prev.maxXP;
-        const newMaxXP = Math.round(prev.maxXP * 1.25);
-
-        // Trigger level up modal celebration
-        setTimeout(() => {
-          setLevelUpModal({ open: true, level: newLevel });
-        }, 400);
-
-        // Add level up to activity log
-        setActivities(acts => [
-          {
-            id: `act-${Date.now()}-lvl`,
-            type: 'level_up',
-            title: `Levelled up to Level ${newLevel}`,
-            timeAgo: 'Just now',
-            timestamp: Date.now()
-          },
-          ...acts
-        ]);
-
-        return {
-          ...prev,
-          level: newLevel,
-          currentXP: remainingXP,
-          maxXP: newMaxXP,
-          gold: nextGold,
-          totalXP: nextTotalXP
-        };
-      }
-
-      return {
-        ...prev,
-        currentXP: nextXP,
-        totalXP: nextTotalXP,
-        gold: nextGold
-      };
-    });
-
-    // Boost attribute if provided and dynamically recalculate max vitals
-    if (attrType) {
-      setAttributes(prev => {
-        const nextAttrs = prev.map(a => {
-          if (a.id === attrType) {
-            return { ...a, current: Math.min(a.max, a.current + 1) };
-          }
-          return a;
-        });
-
-        // Recalculate dynamic maxHealth & maxEnergy based on new Vitality & Discipline
-        const vit = nextAttrs.find(a => a.id === 'vitality')?.current || 10;
-        const dis = nextAttrs.find(a => a.id === 'discipline')?.current || 10;
-        const newMaxHP = 100 + vit * 2;
-        const newMaxEnergy = 100 + Math.round(vit * 1.5 + dis * 0.5);
-
-        setProfile(p => ({
-          ...p,
-          maxHealth: newMaxHP,
-          maxEnergy: newMaxEnergy
-        }));
-
-        return nextAttrs;
-      });
-    }
-
-    // Add activity log
-    if (questTitle) {
-      setActivities(prev => [
-        {
-          id: `act-${Date.now()}`,
-          type: 'completed_quest',
-          title: `Completed: ${questTitle}`,
-          xp,
-          gold,
-          timeAgo: 'Just now',
-          timestamp: Date.now()
-        },
-        ...prev
-      ]);
-    }
+  // Handle continuing / progressing a quest
+  const handleContinueQuest = async (questId: string) => {
+    await handleCompleteQuestDirectly(questId);
   };
 
   // Accept quest from board into active list
@@ -494,231 +420,212 @@ export default function App() {
     }
   };
 
-  // Add new quest
-  const handleAddQuest = (newQuestData: Omit<Quest, 'id' | 'progress'> | Quest) => {
-    const newQuest: Quest = {
-      ...newQuestData,
-      id: 'id' in newQuestData && newQuestData.id ? newQuestData.id : `quest-${Date.now()}`,
-      progress: 'progress' in newQuestData && typeof newQuestData.progress === 'number' ? newQuestData.progress : 0,
+  // Add new quest via backend API
+  const handleAddQuest = async (newQuestData: Omit<Quest, 'id' | 'progress'> | Quest) => {
+    try {
+      const res = await questApi.createQuest(newQuestData);
+      if (res.success && res.data) {
+        setQuests(prev => [{ ...res.data, active: true }, ...prev]);
+        soundFx.playCelebration();
+        showToast(`New Quest Inscribed: "${res.data.title}" added to Active Quests!`);
+        refreshBackgroundData();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Backend quest creation fallback to local:', err?.message);
+    }
+
+    // Local fallback creation
+    const createdQuest: Quest = {
+      id: `quest-${Date.now()}`,
+      title: newQuestData.title,
+      description: newQuestData.description || 'Custom heroic quest',
+      category: newQuestData.category || 'DISCIPLINE',
+      categoryColor: (newQuestData as any).categoryColor,
+      xpReward: Number(newQuestData.xpReward) || 200,
+      goldReward: Number(newQuestData.goldReward) || 30,
+      attribute: newQuestData.attribute || 'discipline',
+      progress: 0,
       active: true,
-      completed: false
+      completed: false,
+      frequency: newQuestData.frequency || 'Daily',
+      difficulty: newQuestData.difficulty || 'Medium',
+      estimatedMinutes: newQuestData.estimatedMinutes || 30,
+      currentMinutes: 0,
+      iconName: newQuestData.iconName || 'shield'
     };
 
-    setQuests(prev => [newQuest, ...prev]);
-    showToast(`New Quest Inscribed: "${newQuest.title}" added to Active Quests!`);
+    setQuests(prev => [createdQuest, ...prev]);
+    soundFx.playCelebration();
+    showToast(`New Quest Inscribed: "${createdQuest.title}" added to Active Quests!`);
   };
 
-  // Check in day
-  const handleCheckInDay = (index: number) => {
-    if (streakWeek[index].checked) return;
+  // Check in day via backend API
+  const handleCheckInDay = async (index: number) => {
+    if (streakWeek[index]?.checked) {
+      showToast("Day already checked in!");
+      return;
+    }
 
-    setStreakWeek(prev => prev.map((item, i) => {
-      if (i === index) return { ...item, checked: true };
-      return item;
-    }));
+    try {
+      const res = await streakApi.checkIn();
+      if (res.success && res.data) {
+        soundFx.playQuestComplete();
+        if (res.data.character) {
+          updateProfileAndStats(res.data.character);
+        }
+        setStreakWeek(prev => prev.map((item, i) => i === index ? { ...item, checked: true } : item));
+        showToast(`🔥 ${res.message || 'Streak Sealed!'}`);
+        refreshBackgroundData();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Backend streak checkin fallback:', err?.message);
+    }
 
+    // Fallback local check-in
+    soundFx.playQuestComplete();
+    setStreakWeek(prev => prev.map((item, i) => i === index ? { ...item, checked: true } : item));
+    const streakBonusXp = 50;
+    const streakBonusGold = 20;
     setProfile(prev => ({
       ...prev,
       streakDays: prev.streakDays + 1,
-      health: prev.maxHealth,
-      energy: prev.maxEnergy
+      currentXP: prev.currentXP + streakBonusXp,
+      gold: prev.gold + streakBonusGold,
+      totalXP: (prev.totalXP || 0) + streakBonusXp
     }));
-
-    awardXPAndGold(150, 25);
-    soundFx.playQuestComplete();
-    showToast(`🔥 Streak Sealed! Day ${profile.streakDays + 1} logged. 100% Health & Energy restored, +150 XP & +25 Gold!`);
+    showToast(`🔥 Streak Sealed! +${streakBonusXp} XP, +${streakBonusGold} Gold!`);
   };
 
-  // Use / Equip inventory item
-  const handleUseItem = (itemId: string) => {
+  // Equip or unequip gear/relics via backend API
+  const handleEquipItem = async (itemId: string) => {
     const targetItem = inventory.find(i => i.id === itemId);
     if (!targetItem) return;
 
-    if (targetItem.type === 'potion' || targetItem.category === 'consumables' || targetItem.category === 'boosts') {
-      if (targetItem.quantity <= 0) {
-        showToast(`No charges left for "${targetItem.name}"!`);
-        return;
-      }
+    // Prevent equipping items with 0 copies if not currently equipped
+    if (!targetItem.equipped && targetItem.quantity <= 0) {
+      showToast(`You do not have ${targetItem.name} in your vault to equip.`);
+      return;
+    }
 
-      // Determine XP, Gold and Attribute rewards based on item
-      let xpAward = 250;
-      let goldAward = 0;
-      let attrBoost: AttributeType | undefined = undefined;
-
-      const idLow = itemId.toLowerCase();
-      if (idLow.includes('focus')) {
-        xpAward = 350;
-        attrBoost = 'intellect';
-      } else if (idLow.includes('health') || idLow.includes('vitality')) {
-        xpAward = 250;
-        attrBoost = 'vitality';
-      } else if (idLow.includes('productivity') || idLow.includes('brew')) {
-        xpAward = 400;
-        goldAward = 75;
-        attrBoost = 'discipline';
-      } else if (idLow.includes('time_shard') || idLow.includes('shard')) {
-        xpAward = 600;
-        goldAward = 150;
-      } else if (idLow.includes('knowledge') || idLow.includes('scroll') || idLow.includes('tome')) {
-        xpAward = 500;
-        attrBoost = 'wisdom';
-      } else if (idLow.includes('phoenix')) {
-        xpAward = 1000;
-        goldAward = 250;
-        attrBoost = 'vitality';
-      } else if (idLow.includes('energy')) {
-        xpAward = 200;
-        goldAward = 35;
-        attrBoost = 'strength';
-      } else if (idLow.includes('token') || idLow.includes('badge') || idLow.includes('trophy')) {
-        xpAward = 750;
-        goldAward = 300;
-      }
-
-      // Health and Energy restorations
-      let hpRest = targetItem.healthRestore || 0;
-      let epRest = targetItem.energyRestore || 0;
-
-      if (idLow.includes('health')) {
-        hpRest = Math.max(hpRest, 50);
-      } else if (idLow.includes('vitality')) {
-        hpRest = Math.max(hpRest, 40);
-        epRest = Math.max(epRest, 25);
-      } else if (idLow.includes('energy')) {
-        epRest = Math.max(epRest, 40);
-      } else if (idLow.includes('productivity') || idLow.includes('brew')) {
-        epRest = Math.max(epRest, 50);
-        hpRest = Math.max(hpRest, 20);
-      } else if (idLow.includes('focus')) {
-        epRest = Math.max(epRest, 40);
-      }
-
-      if (hpRest > 0 || epRest > 0) {
-        setProfile(prev => ({
-          ...prev,
-          health: Math.min(prev.maxHealth, prev.health + hpRest),
-          energy: Math.min(prev.maxEnergy, prev.energy + epRest)
-        }));
-      }
-
-      setInventory(prev => prev.map(item => {
-        if (item.id === itemId) {
-          return { ...item, quantity: Math.max(0, item.quantity - 1) };
-        }
-        return item;
-      }));
-
-      soundFx.playCelebration();
-      const vitalsText = (hpRest > 0 ? ` +${hpRest} HP` : '') + (epRest > 0 ? ` +${epRest} Energy` : '');
-      showToast(`Consumed ${targetItem.name}!${vitalsText} +${xpAward} XP${goldAward > 0 ? `, +${goldAward} Gold` : ''}! (${targetItem.bonus})`);
-      awardXPAndGold(xpAward, goldAward, attrBoost, `Consumed ${targetItem.name}`);
-    } else {
-      // Equipment
-      if (!targetItem.equipped && targetItem.quantity <= 0) {
+    try {
+      const res = await inventoryApi.equipItem(itemId);
+      if (res.success && res.data) {
         soundFx.playClick();
-        showToast(`Cannot equip "${targetItem.name}": 0 in vault! Complete quests to loot it.`);
+        const nextEq = !!res.data.equipped;
+        const safeQty = typeof res.data.quantity === 'number' ? res.data.quantity : Math.max(1, targetItem.quantity);
+        setInventory(prev => prev.map(i => i.id === itemId ? { ...i, equipped: nextEq, quantity: safeQty } : i));
+        showToast(res.message);
+        refreshBackgroundData();
         return;
       }
-
-      const nextEquipped = !targetItem.equipped;
-      setInventory(prev => prev.map(item => {
-        if (item.id === itemId) {
-          return { ...item, equipped: nextEquipped };
-        }
-        return item;
-      }));
-      showToast(nextEquipped ? `Equipped ${targetItem.name}! (${targetItem.bonus})` : `Unequipped ${targetItem.name}.`);
-      soundFx.playClick();
+    } catch (err: any) {
+      console.warn('Backend equipItem fallback:', err?.message);
     }
+
+    // Local equip toggle fallback
+    const nextEq = !targetItem.equipped;
+    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, equipped: nextEq, quantity: Math.max(1, i.quantity) } : i));
+    soundFx.playClick();
+    showToast(nextEq ? `Equipped ${targetItem.name}!` : `Unequipped ${targetItem.name}.`);
   };
 
-  // Sell inventory item for Gold
-  const handleSellItem = (itemId: string, goldPrice: number) => {
-    const target = inventory.find(i => i.id === itemId);
-    if (!target || target.quantity <= 0) {
-      showToast("Cannot sell: none left in inventory!");
+  // Consume potion, elixir, or consumable item via backend API
+  const handleConsumeItem = async (itemId: string) => {
+    const targetItem = inventory.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    if (targetItem.quantity <= 0) {
+      showToast(`No charges left for ${targetItem.name}. Purchase more from the merchant!`);
       return;
     }
 
-    setInventory(prev => prev.map(item => {
-      if (item.id === itemId) {
-        return { ...item, quantity: Math.max(0, item.quantity - 1) };
+    try {
+      const res = await inventoryApi.useItem(itemId);
+      if (res.success && res.data) {
+        soundFx.playCelebration();
+        updateProfileAndStats(res.data.character);
+        const remQty = res.data.remainingQuantity;
+        setInventory(prev => prev.map(i => i.id === itemId ? { ...i, quantity: remQty } : i));
+        showToast(res.message);
+        refreshBackgroundData();
+        return;
       }
-      return item;
-    }));
-
-    setProfile(prev => ({
-      ...prev,
-      gold: prev.gold + goldPrice
-    }));
-
-    setActivities(acts => [
-      {
-        id: `act-${Date.now()}-sell`,
-        type: 'item_acquired',
-        title: `Sold ${target.name} for +${goldPrice} Gold`,
-        gold: goldPrice,
-        timeAgo: 'Just now',
-        timestamp: Date.now()
-      },
-      ...acts
-    ]);
-
-    soundFx.playQuestComplete();
-    showToast(`Merchant Vault: Sold 1x "${target.name}" for +${goldPrice} Gold!`);
-  };
-
-  // Buy virtual items with Gold
-  const handleBuyItem = (itemTemplate: any) => {
-    if (profile.gold < itemTemplate.price) {
-      soundFx.playClick();
-      showToast(`⚠️ Insufficient Gold! You need ${itemTemplate.price - profile.gold} more Gold to buy "${itemTemplate.name}".`);
-      return;
+    } catch (err: any) {
+      console.warn('Backend useItem fallback:', err?.message);
     }
 
+    // Local potion use fallback
+    const healthRestore = targetItem.healthRestore || 40;
+    const energyRestore = targetItem.energyRestore || 35;
+    const xpBonus = 250;
     setProfile(prev => ({
       ...prev,
-      gold: prev.gold - itemTemplate.price
+      health: Math.min(prev.maxHealth, prev.health + healthRestore),
+      energy: Math.min(prev.maxEnergy, prev.energy + energyRestore),
+      currentXP: prev.currentXP + xpBonus,
+      totalXP: (prev.totalXP || 0) + xpBonus
     }));
-
-    setInventory(prev => {
-      const existing = prev.find(i => i.id === itemTemplate.id);
-      if (existing) {
-        return prev.map(i => i.id === itemTemplate.id ? { ...i, quantity: i.quantity + 1 } : i);
-      }
-      return [
-        ...prev,
-        {
-          id: itemTemplate.id,
-          name: itemTemplate.name,
-          rarity: itemTemplate.rarity,
-          type: itemTemplate.type,
-          category: itemTemplate.category,
-          description: itemTemplate.description,
-          bonus: itemTemplate.bonus,
-          sellPrice: Math.round(itemTemplate.price * 0.6),
-          icon: itemTemplate.icon,
-          quantity: 1,
-          equipped: false,
-          healthRestore: itemTemplate.healthRestore,
-          energyRestore: itemTemplate.energyRestore
-        }
-      ];
-    });
-
+    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, quantity: Math.max(0, i.quantity - 1) } : i));
     soundFx.playCelebration();
-    showToast(`🛒 Purchased "${itemTemplate.name}" for ${itemTemplate.price} Gold! Added to your Vault.`);
+    showToast(`Consumed ${targetItem.name}! Restored +${healthRestore} HP & +${energyRestore} Energy.`);
+  };
 
-    setActivities(acts => [
-      {
-        id: `act-${Date.now()}-buy`,
-        type: 'item_acquired',
-        title: `Purchased ${itemTemplate.name} for ${itemTemplate.price} Gold`,
-        timeAgo: 'Just now',
-        timestamp: Date.now()
-      },
-      ...acts
-    ]);
+  // Smart action router for inventory interactions
+  const handleUseItem = async (itemId: string) => {
+    const targetItem = inventory.find(i => i.id === itemId);
+    if (!targetItem) return;
+
+    const isConsumable = targetItem.type === 'potion' || targetItem.category === 'consumables' || targetItem.id === 'ancient_scroll';
+    if (isConsumable) {
+      await handleConsumeItem(itemId);
+    } else {
+      await handleEquipItem(itemId);
+    }
+  };
+
+  // Sell inventory item for Gold via backend API
+  const handleSellItem = async (itemId: string, goldPrice: number) => {
+    try {
+      const res = await inventoryApi.sellItem(itemId);
+      if (res.success && res.data) {
+        soundFx.playQuestComplete();
+        setProfile(prev => ({ ...prev, gold: res.data.currentGold }));
+        setInventory(prev => prev.map(i => i.id === itemId ? { ...i, quantity: res.data.remainingQuantity } : i));
+        showToast(res.message);
+        refreshBackgroundData();
+        return;
+      }
+    } catch (err: any) {
+      console.warn('Backend sellItem fallback:', err?.message);
+    }
+
+    // Local sell fallback
+    setInventory(prev => prev.map(i => i.id === itemId ? { ...i, quantity: Math.max(0, i.quantity - 1) } : i).filter(i => i.quantity > 0));
+    setProfile(prev => ({ ...prev, gold: prev.gold + goldPrice }));
+    soundFx.playQuestComplete();
+    showToast(`Sold item for +${goldPrice} Gold!`);
+  };
+
+  // Buy virtual items with Gold via backend API
+  const handleBuyItem = async (itemTemplate: any) => {
+    try {
+      const res = await inventoryApi.buyItem(itemTemplate.id);
+      if (res.success && res.data) {
+        soundFx.playCelebration();
+        setProfile(prev => ({ ...prev, gold: res.data.remainingGold }));
+        showToast(res.message);
+        const invRes = await inventoryApi.getInventory();
+        if (invRes.data?.items) {
+          setInventory(invRes.data.items);
+        }
+        refreshBackgroundData();
+      }
+    } catch (err: any) {
+      soundFx.playClick();
+      showToast(`⚠️ ${err.message || 'Cannot buy item'}`);
+    }
   };
 
   // Buy & Equip Realm Theme with Gold
@@ -795,6 +702,26 @@ export default function App() {
     ]);
   };
 
+  // Logout handler
+  const handleLogout = () => {
+    authApi.logout();
+    setIsAuthenticated(false);
+    setIsAuthModalOpen(true);
+    showToast("Departed the Realm. Safe travels, adventurer!");
+  };
+
+  // Successful authentication handler
+  const handleAuthSuccess = (authData: any) => {
+    setIsAuthenticated(true);
+    setIsAuthModalOpen(false);
+    setCurrentUser(authData.user);
+    if (authData.character) {
+      updateProfileAndStats(authData.character, authData.user);
+    }
+    loadGameData();
+    showToast(`Welcome, ${authData.user?.username || 'Hero'}! Entered the Realm.`);
+  };
+
   // Filter quests & activities by search query
   const filteredQuests = quests.filter(q => 
     q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -803,7 +730,7 @@ export default function App() {
   );
 
   // Active quests in progress (not completed)
-  const activeQuests = filteredQuests.filter(q => q.active && !q.completed);
+  const activeQuests = filteredQuests.filter(q => q.active !== false && !q.completed && q.status !== 'COMPLETED');
 
   // Dynamic theme wrapper class
   const getThemeWrapperClass = () => {
@@ -828,20 +755,15 @@ export default function App() {
     <div className={`min-h-screen ${getThemeWrapperClass()} flex relative overflow-x-hidden transition-colors duration-500`}>
       {/* Background ambient lighting effects */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        {/* Purple top glow */}
         <div className="absolute -top-40 left-1/4 w-96 h-96 bg-purple-900/15 rounded-full blur-[120px]" />
-        {/* Cyan center-right glow */}
         <div className="absolute top-1/3 right-10 w-96 h-96 bg-cyan-900/10 rounded-full blur-[130px]" />
-        {/* Amber bottom glow */}
         <div className="absolute -bottom-40 right-1/4 w-96 h-96 bg-amber-900/10 rounded-full blur-[140px]" />
       </div>
 
       {/* Left Sidebar Navigation */}
       <Sidebar
         currentTab={currentTab}
-        setCurrentTab={(tab) => {
-          setCurrentTab(tab);
-        }}
+        setCurrentTab={(tab) => setCurrentTab(tab)}
         openAddQuest={() => setCurrentTab('add_quest')}
         questCount={activeQuests.length}
         mobileOpen={mobileNavOpen}
@@ -860,56 +782,43 @@ export default function App() {
           setSoundEnabled={setSoundEnabled}
           setMobileOpen={setMobileNavOpen}
           onProfileClick={() => setCurrentTab('character')}
-          onNotificationsClick={() => showToast("You have 1 pending daily trial available in Active Quests!")}
+          onNotificationsClick={() => showToast("You have active trials available in the Quest Board!")}
           onSettingsClick={() => setCurrentTab('settings')}
           onRest={handleRest}
+          isAuthenticated={isAuthenticated}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
         />
 
-        {/* Main Canvas: Settings View OR Achievements View OR Inventory View OR Character View OR History View OR Add Quest View OR Quest Board OR Overview Dashboard */}
+        {/* Main Canvas */}
         <main id="main-content" role="main" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-7 max-w-[1600px] w-full mx-auto space-y-6 outline-none">
           {currentTab === 'settings' ? (
-            /* Dedicated Settings View matching the reference screenshot */
             <SettingsView
               showToast={showToast}
               soundEnabled={soundEnabled}
               setSoundEnabled={setSoundEnabled}
               profile={profile}
+              onLogout={handleLogout}
+              userEmail={currentUser?.email}
             />
           ) : currentTab === 'achievements' ? (
-            /* Dedicated Achievements View matching the reference screenshot */
             <AchievementsView
               achievements={achievements}
               showToast={showToast}
-              onProgressAchievement={(id) => {
-                setAchievements(prev => prev.map(a => {
-                  if (a.id === id) {
-                    if (a.status === 'completed' || a.unlocked || a.progress >= a.maxProgress) {
-                      return a;
-                    }
-                    const newProg = Math.min(a.maxProgress, a.progress + 1);
-                    const completed = newProg >= a.maxProgress;
-                    if (completed) {
-                      soundFx.playAchievementUnlock();
-                      showToast(`Achievement Unlocked: "${a.title}"! +${a.xpReward} XP, +${a.goldReward} Gold!`);
-                      awardXPAndGold(a.xpReward, a.goldReward);
-                    }
-                    return {
-                      ...a,
-                      progress: newProg,
-                      unlocked: completed,
-                      status: completed ? 'completed' : 'in_progress'
-                    };
-                  }
-                  return a;
-                }));
+              onProgressAchievement={async () => {
+                const achRes = await achievementApi.getAchievements().catch(() => null);
+                if (achRes?.success && Array.isArray(achRes.data)) {
+                  setAchievements(achRes.data);
+                }
               }}
             />
           ) : currentTab === 'inventory' ? (
-            /* Dedicated Inventory View matching the reference screenshot */
             <InventoryView
               items={inventory}
               gold={profile.gold}
               onUseItem={handleUseItem}
+              onEquipItem={handleEquipItem}
+              onConsumeItem={handleConsumeItem}
               onSellItem={handleSellItem}
               onBuyItem={handleBuyItem}
               onBuyTheme={handleBuyTheme}
@@ -921,7 +830,6 @@ export default function App() {
               showToast={showToast}
             />
           ) : currentTab === 'character' ? (
-            /* Dedicated Character View matching the reference screenshot */
             <CharacterView
               profile={profile}
               setProfile={setProfile}
@@ -937,13 +845,11 @@ export default function App() {
               onRest={handleRest}
             />
           ) : currentTab === 'history' ? (
-            /* Dedicated Adventure Log / History View matching the uploaded History.png reference image */
             <HistoryView
               showToast={showToast}
               onOpenQuestBoard={() => setCurrentTab('quests')}
             />
           ) : currentTab === 'add_quest' ? (
-            /* Dedicated Inscribe Quest View matching the uploaded Add Quests.png reference image */
             <AddQuestView
               onAddQuest={(newQuest) => {
                 handleAddQuest(newQuest);
@@ -953,7 +859,6 @@ export default function App() {
               showToast={showToast}
             />
           ) : currentTab === 'quests' ? (
-            /* Dedicated Quest Board View matching the uploaded reference image */
             <QuestBoard
               quests={filteredQuests}
               onContinueQuest={handleContinueQuest}
@@ -971,18 +876,18 @@ export default function App() {
                 {/* Hero Banner with Character Showcase & Glowing XP Bar */}
                 <HeroBanner profile={profile} />
 
-                {/* 5 RPG Stat Cards Row (STRENGTH, INTELLECT, WISDOM, DISCIPLINE, VITALITY) */}
+                {/* 5 RPG Stat Cards Row */}
                 <StatCards 
                   attributes={attributes} 
                   onSelectAttribute={(attrId) => {
                     const matched = attributes.find(a => a.id === attrId);
                     if (matched) {
-                      showToast(`${matched.name}: ${matched.current}/${matched.max} points. Focus on ${matched.subSkills.join(', ')} to raise it!`);
+                      showToast(`${matched.name}: ${matched.current}/${matched.max} points. Complete ${matched.subSkills.join(', ')} quests to raise it!`);
                     }
                   }}
                 />
 
-                {/* Quick Access Action Cards (Add Quest, Character, Inventory, Achievements) */}
+                {/* Quick Access Action Cards */}
                 <QuickAccess
                   onAddQuest={() => setCurrentTab('add_quest')}
                   onOpenCharacter={() => setCurrentTab('character')}
@@ -1011,6 +916,7 @@ export default function App() {
                   <ActiveQuests
                     quests={activeQuests}
                     onContinueQuest={handleContinueQuest}
+                    onCompleteQuest={handleCompleteQuestDirectly}
                     onViewAll={() => setCurrentTab('quests')}
                     onOpenAddQuest={() => setIsAddQuestOpen(true)}
                   />
@@ -1091,6 +997,15 @@ export default function App() {
         droppedItem={questRewardModal.droppedItem}
         bonusXP={questRewardModal.bonusXP}
         bonusGold={questRewardModal.bonusGold}
+      />
+
+      {/* Authentication Gateway Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          if (isAuthenticated) setIsAuthModalOpen(false);
+        }}
+        onSuccess={handleAuthSuccess}
       />
     </div>
   );

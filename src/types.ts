@@ -100,4 +100,5 @@ export interface CharacterProfile {
   unlockedTitles?: string[];
   unlockedThemes?: string[];
   currentTheme?: string;
+  canRestToday?: boolean;
 }

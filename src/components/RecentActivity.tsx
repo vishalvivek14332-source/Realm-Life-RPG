@@ -69,14 +69,14 @@ export const RecentActivity: React.FC<RecentActivityProps> = ({ activities, onVi
                   {item.title}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {item.xp !== undefined && (
+                  {(item.xp !== undefined || (item as any).xpGained !== undefined) && (
                     <span className="text-[11px] font-bold text-cyan-400 flex items-center gap-0.5">
-                      +{item.xp} XP
+                      +{item.xp ?? (item as any).xpGained} XP
                     </span>
                   )}
-                  {item.gold !== undefined && (
+                  {(item.gold !== undefined || (item as any).goldGained !== undefined) && (
                     <span className="text-[11px] font-bold text-amber-400 flex items-center gap-0.5">
-                      +{item.gold} Gold
+                      +{item.gold ?? (item as any).goldGained} Gold
                     </span>
                   )}
                 </div>

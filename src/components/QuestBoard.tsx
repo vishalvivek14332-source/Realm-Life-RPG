@@ -24,6 +24,76 @@ import { Quest } from '../types';
 import { soundFx } from '../sound';
 import parchmentLanternImg from '../assets/images/parchment_lantern_1789201037103.jpg';
 import realmBg from '../assets/images/realm_fantasy_bg_1789200503712.jpg';
+import questDeepWork from '../assets/images/quest_deepwork_1789200577920.jpg';
+import questGymWeights from '../assets/images/quest_gym_weights_1789201011033.jpg';
+import questExercise from '../assets/images/quest_exercise_1789200594078.jpg';
+import questReading from '../assets/images/quest_reading_1789200614011.jpg';
+import questPlanDay from '../assets/images/quest_plan_day_1789200935829.jpg';
+import questMeditation from '../assets/images/quest_meditation_1789200950636.jpg';
+import questDrinkWater from '../assets/images/quest_water_bottle_1789200964839.jpg';
+import questAssignment from '../assets/images/quest_assignment_1789200979976.jpg';
+import questCleanSpace from '../assets/images/quest_clean_space_1789200996914.jpg';
+import campfireCitadel from '../assets/images/campfire_citadel_1789200559232.jpg';
+import promoJourney from '../assets/images/promo_journey_1789200632036.jpg';
+
+export const getQuestCardImage = (quest?: Partial<Quest> | null): string => {
+  if (!quest) return campfireCitadel;
+  if (quest.image && typeof quest.image === 'string' && quest.image.length > 5) {
+    return quest.image;
+  }
+  const title = (quest.title || '').toLowerCase();
+  const cat = (quest.category || '').toUpperCase();
+  const attr = (quest.attribute || '').toLowerCase();
+
+  // Match by title keywords
+  if (title.includes('deep work') || title.includes('focus') || title.includes('study') || title.includes('learn') || title.includes('code') || title.includes('coding')) {
+    return questDeepWork;
+  }
+  if (title.includes('gym') || title.includes('lift') || title.includes('weight') || title.includes('strength') || title.includes('pushup') || title.includes('bench')) {
+    return questGymWeights;
+  }
+  if (title.includes('exercise') || title.includes('run') || title.includes('workout') || title.includes('cardio') || title.includes('walk')) {
+    return questExercise;
+  }
+  if (title.includes('read') || title.includes('book') || title.includes('knowledge') || title.includes('chapter') || title.includes('novel')) {
+    return questReading;
+  }
+  if (title.includes('plan') || title.includes('schedule') || title.includes('organize') || title.includes('calendar') || title.includes('goal')) {
+    return questPlanDay;
+  }
+  if (title.includes('meditat') || title.includes('mindful') || title.includes('breathe') || title.includes('peace') || title.includes('zen')) {
+    return questMeditation;
+  }
+  if (title.includes('water') || title.includes('hydrat') || title.includes('drink')) {
+    return questDrinkWater;
+  }
+  if (title.includes('assignment') || title.includes('homework') || title.includes('project') || title.includes('report') || title.includes('essay')) {
+    return questAssignment;
+  }
+  if (title.includes('clean') || title.includes('room') || title.includes('space') || title.includes('tidy') || title.includes('desk')) {
+    return questCleanSpace;
+  }
+
+  // Match by category
+  if (cat === 'STUDY' || cat === 'WORK' || cat === 'CAREER') {
+    return questDeepWork;
+  }
+  if (cat === 'HEALTH') {
+    return questGymWeights;
+  }
+  if (cat === 'PERSONAL' || cat === 'DISCIPLINE') {
+    return questPlanDay;
+  }
+
+  // Match by attribute
+  if (attr === 'strength') return questGymWeights;
+  if (attr === 'intellect') return questAssignment;
+  if (attr === 'wisdom') return questMeditation;
+  if (attr === 'vitality') return questDrinkWater;
+  if (attr === 'discipline') return questPlanDay;
+
+  return promoJourney;
+};
 
 interface QuestBoardProps {
   quests: Quest[];
@@ -284,18 +354,12 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                 >
                   {/* Top Image Banner */}
                   <div className="relative w-full h-36 overflow-hidden">
-                    {quest.image ? (
-                      <img
-                        src={quest.image}
-                        alt={quest.title}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-purple-950/40 flex items-center justify-center">
-                        <Sparkles className="w-8 h-8 text-purple-400" />
-                      </div>
-                    )}
+                    <img
+                      src={getQuestCardImage(quest)}
+                      alt={quest.title}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
 
                     {/* Dark gradient shadow on bottom of image for readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#13102d] via-transparent to-transparent opacity-90" />
@@ -374,37 +438,27 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                           e.stopPropagation();
                           if (isCompleted) {
                             soundFx.playQuestComplete();
-                          } else if (quest.active) {
-                            soundFx.playClick();
-                            onContinueQuest(quest.id);
                           } else {
-                            soundFx.playClick();
-                            onAcceptQuest?.(quest.id);
+                            soundFx.playQuestComplete();
+                            onCompleteQuest(quest.id);
                           }
                         }}
                         className={`
-                          w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer
+                          w-full py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer
                           ${isCompleted 
                             ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/80' 
-                            : quest.active 
-                              ? 'bg-gradient-to-r from-purple-800 to-indigo-700 hover:from-purple-700 hover:to-indigo-600 text-white border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.3)]' 
-                              : 'bg-purple-950/60 hover:bg-purple-800/80 text-purple-200 hover:text-white border border-purple-700/50 hover:border-purple-400'}
+                            : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white border border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[0_0_16px_rgba(16,185,129,0.6)]'}
                         `}
                       >
                         {isCompleted ? (
                           <>
-                            <Check className="w-3 h-3 text-emerald-400" />
-                            <span>Completed</span>
-                          </>
-                        ) : quest.active ? (
-                          <>
-                            <span>Continue</span>
-                            <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Claimed & Completed</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-3 h-3 text-amber-300" />
-                            <span>Accept Quest</span>
+                            <Check className="w-3.5 h-3.5 text-emerald-200" />
+                            <span>Complete (+{quest.xpReward} XP, +{quest.goldReward} Gold)</span>
                           </>
                         )}
                       </button>
@@ -506,18 +560,12 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
 
             {/* Selected Quest Image Preview */}
             <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 shadow-lg">
-              {selectedQuest.image ? (
-                <img
-                  src={selectedQuest.image}
-                  alt={selectedQuest.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-purple-950/40 flex items-center justify-center">
-                  <Sparkles className="w-8 h-8 text-purple-400" />
-                </div>
-              )}
+              <img
+                src={getQuestCardImage(selectedQuest)}
+                alt={selectedQuest?.title || 'Quest Details'}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
               {/* Overlay shadow */}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0920] via-transparent to-transparent opacity-80" />
 
@@ -640,41 +688,30 @@ export const QuestBoard: React.FC<QuestBoardProps> = ({
                   <CheckCircle className="w-4 h-4 text-emerald-400" />
                   <span>Claimed & Completed</span>
                 </button>
-              ) : selectedQuest.active ? (
+              ) : (
                 <>
-                  <button
-                    onClick={() => {
-                      soundFx.playClick();
-                      onContinueQuest(selectedQuest.id);
-                    }}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-700 via-purple-600 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white font-extrabold text-sm tracking-wide shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:shadow-[0_0_25px_rgba(168,85,247,0.7)] transition-all flex items-center justify-center gap-2 group cursor-pointer"
-                  >
-                    <span>Continue Quest</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </button>
-
                   <button
                     onClick={() => {
                       soundFx.playQuestComplete();
                       onCompleteQuest(selectedQuest.id);
                     }}
-                    className="w-full py-2 px-4 rounded-xl bg-black/40 hover:bg-emerald-950/40 text-slate-300 hover:text-emerald-200 border border-white/10 hover:border-emerald-500/50 font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-extrabold text-sm tracking-wide shadow-[0_0_20px_rgba(16,185,129,0.5)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)] transition-all flex items-center justify-center gap-2 group cursor-pointer"
                   >
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
-                    <span>Mark as Complete</span>
+                    <CheckCircle className="w-4 h-4 text-emerald-200" />
+                    <span>Complete Quest (+{selectedQuest.xpReward} XP, +{selectedQuest.goldReward} Gold)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      soundFx.playClick();
+                      onContinueQuest(selectedQuest.id);
+                    }}
+                    className="w-full py-2 px-4 rounded-xl bg-black/40 hover:bg-purple-950/40 text-slate-300 hover:text-purple-200 border border-white/10 hover:border-purple-500/50 font-bold text-xs tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Quick Progress (+25%)</span>
                   </button>
                 </>
-              ) : (
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    onAcceptQuest?.(selectedQuest.id);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-500 hover:from-amber-500 hover:to-yellow-400 text-amber-950 font-black text-sm tracking-wide shadow-[0_0_20px_rgba(245,158,11,0.5)] hover:shadow-[0_0_25px_rgba(245,158,11,0.7)] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-amber-950" />
-                  <span>Accept Quest (+1 Active)</span>
-                </button>
               )}
             </div>
           </div>

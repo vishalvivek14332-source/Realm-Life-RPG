@@ -11,13 +11,13 @@ import questCleanSpace from './assets/images/quest_clean_space_1789200996914.jpg
 export const initialProfile: CharacterProfile = {
   name: 'SHADOW',
   title: 'Novice Wanderer',
-  level: 0,
+  level: 1,
   health: 100,
   maxHealth: 100,
   energy: 100,
   maxEnergy: 100,
   currentXP: 0,
-  maxXP: 200,
+  maxXP: 100,
   gold: 50,
   totalXP: 0,
   streakDays: 1,
@@ -25,7 +25,8 @@ export const initialProfile: CharacterProfile = {
   equippedItems: ['trackers_blade_item', 'mindful_cloak'],
   unlockedTitles: ['Novice Wanderer', 'Trailblazer'],
   unlockedThemes: ['theme-default'],
-  currentTheme: 'theme-default'
+  currentTheme: 'theme-default',
+  canRestToday: true
 };
 
 export const initialAttributes: AttributeStat[] = [
@@ -97,7 +98,7 @@ export const initialQuests: Quest[] = [
     goldReward: 40,
     attribute: 'intellect',
     progress: 0,
-    active: false,
+    active: true,
     completed: false,
     difficulty: 'Medium',
     estimatedMinutes: 30,
@@ -117,7 +118,7 @@ export const initialQuests: Quest[] = [
     goldReward: 50,
     attribute: 'strength',
     progress: 0,
-    active: false,
+    active: true,
     completed: false,
     difficulty: 'Medium',
     estimatedMinutes: 20,
@@ -137,7 +138,7 @@ export const initialQuests: Quest[] = [
     goldReward: 30,
     attribute: 'wisdom',
     progress: 0,
-    active: false,
+    active: true,
     completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 25,
@@ -157,7 +158,7 @@ export const initialQuests: Quest[] = [
     goldReward: 20,
     attribute: 'discipline',
     progress: 0,
-    active: false,
+    active: true,
     completed: false,
     difficulty: 'Easy',
     estimatedMinutes: 15,

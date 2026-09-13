@@ -7,6 +7,7 @@ import {
   Clock, 
   Coins, 
   Shield, 
+  ShieldOff,
   Check, 
   Zap, 
   Flame, 
@@ -290,6 +291,8 @@ interface InventoryViewProps {
   items: InventoryItem[];
   gold: number;
   onUseItem: (itemId: string) => void;
+  onEquipItem?: (itemId: string) => void;
+  onConsumeItem?: (itemId: string) => void;
   onSellItem: (itemId: string, goldPrice: number) => void;
   onBuyItem: (item: any) => void;
   onBuyTheme: (themeId: string, name: string, price: number) => void;
@@ -305,6 +308,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   items,
   gold,
   onUseItem,
+  onEquipItem,
+  onConsumeItem,
   onSellItem,
   onBuyItem,
   onBuyTheme,
@@ -1058,39 +1063,73 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                   <p className="text-xs font-bold text-amber-300">{selectedItem.bonus}</p>
                 </div>
 
-                {/* Action Buttons: Equip / Consume + Sell */}
+                {/* Action Buttons: Equip / Unequip / Consume + Sell */}
                 <div className="pt-2 space-y-2.5">
-                  {selectedItem.type === 'equipment' ? (
-                    <button
-                      type="button"
-                      disabled={!selectedItem.equipped && selectedItem.quantity <= 0}
-                      onClick={() => onUseItem(selectedItem.id)}
-                      className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-400 ${
-                        selectedItem.equipped
-                          ? 'bg-emerald-950/80 border border-emerald-500/60 text-emerald-300'
-                          : selectedItem.quantity > 0
-                            ? 'bg-purple-700 hover:bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
-                            : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span>{selectedItem.equipped ? 'Unequip Gear' : selectedItem.quantity > 0 ? 'Equip Gear' : 'Not in Vault (0)'}</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={selectedItem.quantity <= 0}
-                      onClick={() => onUseItem(selectedItem.id)}
-                      className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-400 ${
-                        selectedItem.quantity > 0
-                          ? 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 hover:from-purple-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
-                          : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
-                      }`}
-                    >
-                      <Flask className="w-4 h-4" />
-                      <span>{selectedItem.quantity > 0 ? 'Drink / Consume (+Vitals & XP)' : 'Depleted (0 Charges)'}</span>
-                    </button>
-                  )}
+                  {(() => {
+                    const isConsumable = selectedItem.type === 'potion' || selectedItem.category === 'consumables' || selectedItem.id === 'ancient_scroll';
+                    const isEquipped = !!selectedItem.equipped;
+                    const canEquip = selectedItem.quantity > 0 || isEquipped;
+                    const canConsume = selectedItem.quantity > 0;
+
+                    if (!isConsumable) {
+                      return (
+                        <button
+                          type="button"
+                          disabled={!isEquipped && !canEquip}
+                          onClick={() => {
+                            soundFx.playClick();
+                            if (onEquipItem) {
+                              onEquipItem(selectedItem.id);
+                            } else {
+                              onUseItem(selectedItem.id);
+                            }
+                          }}
+                          className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-400 ${
+                            isEquipped
+                              ? 'bg-emerald-950/90 border-2 border-emerald-400 text-emerald-200 hover:bg-rose-950/90 hover:border-rose-500 hover:text-rose-200 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(244,63,94,0.4)]'
+                              : canEquip
+                                ? 'bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-600 hover:to-indigo-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+                                : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          {isEquipped ? (
+                            <>
+                              <ShieldOff className="w-4 h-4 text-emerald-300" />
+                              <span>Unequip {selectedItem.type === 'relic' ? 'Relic' : 'Gear'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="w-4 h-4" />
+                              <span>{canEquip ? `Equip ${selectedItem.type === 'relic' ? 'Relic' : 'Gear'}` : 'Not in Vault (0)'}</span>
+                            </>
+                          )}
+                        </button>
+                      );
+                    } else {
+                      return (
+                        <button
+                          type="button"
+                          disabled={!canConsume}
+                          onClick={() => {
+                            soundFx.playClick();
+                            if (onConsumeItem) {
+                              onConsumeItem(selectedItem.id);
+                            } else {
+                              onUseItem(selectedItem.id);
+                            }
+                          }}
+                          className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:ring-2 focus-visible:ring-purple-400 ${
+                            canConsume
+                              ? 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800 hover:from-purple-700 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+                              : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <Flask className="w-4 h-4" />
+                          <span>{canConsume ? 'Drink / Consume (+Vitals & XP)' : 'Depleted (0 Charges)'}</span>
+                        </button>
+                      );
+                    }
+                  })()}
 
                   {/* Sell for Gold Button */}
                   <button

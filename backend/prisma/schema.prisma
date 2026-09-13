@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id               String            @id @default(uuid())
+  username         String            @unique
+  email            String            @unique
+  passwordHash     String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  character        Character?
+  quests           Quest[]
+  questCompletions QuestCompletion[]
+  userInventories  UserInventory[]
+  userAchievements UserAchievement[]
+  streak           Streak?
+  activityLogs     ActivityLog[]
+  transactions     Transaction[]
+
+  @@map("users")
+}
+
+model Character {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  level       Int      @default(1)
+  xp          Int      @default(0)
+  gold        Int      @default(50)
+  health      Int      @default(100)
+  energy      Int      @default(100)
+  strength    Int      @default(10)
+  intellect   Int      @default(10)
+  wisdom      Int      @default(10)
+  discipline  Int      @default(10)
+  vitality    Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("characters")
+}
+
+model Quest {
+  id               String            @id @default(uuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  category         String            // STUDY, HEALTH, PERSONAL, WORK, CAREER, DISCIPLINE
+  difficulty       String            @default("Medium") // Easy, Medium, Hard, Epic
+  attribute        String            // strength, intellect, wisdom, discipline, vitality
+  xpReward         Int
+  goldReward       Int
+  energyCost       Int               @default(15)
+  status           String            @default("ACTIVE") // ACTIVE, COMPLETED, CANCELLED
+  dueDate          DateTime?
+  progress         Int               @default(0) // 0 to 100
+  estimatedMinutes Int               @default(30)
+  currentMinutes   Int               @default(0)
+  frequency        String            @default("Daily") // Daily, Weekly
+  quote            String?
+  iconName         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  completions      QuestCompletion[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("quests")
+}
+
+model QuestCompletion {
+  id          String   @id @default(uuid())
+  questId     String   @unique
+  quest       Quest    @relation(fields: [questId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  xpEarned    Int
+  goldEarned  Int
+
+  @@index([userId])
+  @@map("quest_completions")
+}
+
+model InventoryItem {
+  id            String          @id // e.g. "health_potion", "focus_potion"
+  name          String
+  description   String
+  type          String          // potion, equipment, relic
+  value         Int             @default(50)
+  rarity        String          @default("Common") // Common, Uncommon, Rare, Epic, Legendary
+  bonus         String?
+  category      String?         // consumables, boosts, special, trophies
+  healthRestore Int             @default(0)
+  energyRestore Int             @default(0)
+  icon          String?
+  image         String?
+  quote         String?
+  createdAt     DateTime        @default(now())
+
+  userInventories UserInventory[]
+
+  @@map("inventory_items")
+}
+
+model UserInventory {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  quantity  Int           @default(1)
+  equipped  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([userId, itemId])
+  @@index([userId])
+  @@map("user_inventory")
+}
+
+model Achievement {
+  id          String            @id // e.g. "first_quest", "quest_master"
+  name        String
+  description String
+  requirement String
+  reward      String
+  xpReward    Int               @default(0)
+  goldReward  Int               @default(0)
+  icon        String?
+  category    String?
+  maxProgress Int               @default(1)
+  rarity      String            @default("Common")
+  createdAt   DateTime          @default(now())
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  progress      Int         @default(0)
+  unlockedAt    DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@map("user_achievements")
+}
+
+model Streak {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak Int       @default(0)
+  longestStreak Int       @default(0)
+  lastCheckIn   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("streaks")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // completed_quest, achievement, level_up, item_acquired, streak_milestone
+  title       String
+  description String?
+  xp          Int      @default(0)
+  gold        Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("activity_logs")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // QUEST_REWARD, ITEM_PURCHASE, ITEM_SALE, STREAK_REWARD, REST_REWARD
+  amount      Int      // positive for incoming gold, negative for outgoing gold
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("transactions")
+}

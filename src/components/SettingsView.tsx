@@ -33,13 +33,17 @@ interface SettingsViewProps {
   soundEnabled: boolean;
   setSoundEnabled: (enabled: boolean) => void;
   profile?: CharacterProfile;
+  onLogout?: () => void;
+  userEmail?: string;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   showToast,
   soundEnabled,
   setSoundEnabled,
-  profile
+  profile,
+  onLogout,
+  userEmail
 }) => {
   // Game Settings State
   const [levelUpAnimations, setLevelUpAnimations] = useState(true);
@@ -717,6 +721,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <Lock className="w-3.5 h-3.5 text-amber-400" />
                 <span>Change Password</span>
               </button>
+
+              {onLogout && (
+                <button
+                  id="btn-sign-out"
+                  onClick={() => {
+                    soundFx.playClick();
+                    onLogout();
+                  }}
+                  className="w-full py-2 px-3 rounded-xl border border-rose-600/50 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-sm"
+                >
+                  <span>Depart Realm (Sign Out)</span>
+                </button>
+              )}
             </div>
           </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Package, Sparkles, Shield, Flame, BookOpen, Check } from 'lucide-react';
+import { X, Package, Sparkles, Shield, ShieldOff, Flame, BookOpen, Check, FlaskRound as Flask } from 'lucide-react';
 import { InventoryItem } from '../types';
 import { soundFx } from '../sound';
 import { ITEM_PICTURES } from './InventoryView';
@@ -105,29 +105,56 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                   Qty: <strong className="text-white">{item.quantity}</strong>
                 </span>
 
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    onUseItem(item.id);
-                  }}
-                  className={`
-                    px-3 py-1 rounded-lg text-xs font-bold border transition-all flex items-center gap-1
-                    ${item.equipped 
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60' 
-                      : 'bg-teal-900/60 hover:bg-teal-700/80 text-teal-100 border-teal-500/50'}
-                  `}
-                >
-                  {item.equipped ? (
-                    <>
-                      <Check className="w-3 h-3" />
-                      <span>Equipped</span>
-                    </>
-                  ) : item.type === 'potion' ? (
-                    <span>Consume</span>
-                  ) : (
-                    <span>Equip</span>
-                  )}
-                </button>
+                {(() => {
+                  const isConsumable = item.type === 'potion' || item.category === 'consumables' || item.id === 'ancient_scroll';
+                  const isEquipped = !!item.equipped;
+                  const canEquip = item.quantity > 0 || isEquipped;
+                  const canConsume = item.quantity > 0;
+
+                  return (
+                    <button
+                      type="button"
+                      disabled={isEquipped ? false : isConsumable ? !canConsume : !canEquip}
+                      onClick={() => {
+                        soundFx.playClick();
+                        onUseItem(item.id);
+                      }}
+                      className={`
+                        px-3.5 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer
+                        ${isEquipped 
+                          ? 'bg-emerald-950 text-emerald-300 border-emerald-500/60 hover:bg-rose-950 hover:text-rose-300 hover:border-rose-500/60 shadow-[0_0_10px_rgba(16,185,129,0.3)]' 
+                          : (isConsumable ? canConsume : canEquip)
+                            ? 'bg-teal-900/60 hover:bg-teal-700/80 text-teal-100 border-teal-500/50 shadow-[0_0_10px_rgba(20,184,166,0.3)]'
+                            : 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed opacity-50'}
+                      `}
+                    >
+                      {isEquipped ? (
+                        <>
+                          <ShieldOff className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Unequip</span>
+                        </>
+                      ) : isConsumable ? (
+                        canConsume ? (
+                          <>
+                            <Flask className="w-3.5 h-3.5 text-teal-400" />
+                            <span>Consume</span>
+                          </>
+                        ) : (
+                          <span>Depleted</span>
+                        )
+                      ) : (
+                        canEquip ? (
+                          <>
+                            <Shield className="w-3.5 h-3.5 text-teal-400" />
+                            <span>Equip</span>
+                          </>
+                        ) : (
+                          <span>Locked</span>
+                        )
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           ))}

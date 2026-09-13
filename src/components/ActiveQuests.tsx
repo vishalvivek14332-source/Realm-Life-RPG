@@ -10,13 +10,12 @@ import {
 } from 'lucide-react';
 import { Quest } from '../types';
 import { soundFx } from '../sound';
-import deepWorkImg from '../assets/images/quest_deepwork_1789200577920.jpg';
-import exerciseImg from '../assets/images/quest_exercise_1789200594078.jpg';
-import readingImg from '../assets/images/quest_reading_1789200614011.jpg';
+import { getQuestCardImage } from './QuestBoard';
 
 interface ActiveQuestsProps {
   quests: Quest[];
   onContinueQuest: (questId: string) => void;
+  onCompleteQuest?: (questId: string) => void;
   onViewAll?: () => void;
   onOpenAddQuest?: () => void;
 }
@@ -24,6 +23,7 @@ interface ActiveQuestsProps {
 export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
   quests,
   onContinueQuest,
+  onCompleteQuest,
   onViewAll,
   onOpenAddQuest
 }) => {
@@ -167,8 +167,8 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
         <div className="space-y-3.5">
         {quests.map((quest) => {
           const style = getCardStyling(quest.category);
-          const isCompleted = quest.progress >= 100;
-          const questImg = quest.image || getQuestImage(quest.title, quest.category);
+          const isCompleted = quest.progress >= 100 || quest.completed;
+          const questImg = getQuestCardImage(quest);
 
           return (
             <div
@@ -239,20 +239,25 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
                   </span>
                 </div>
 
-                {/* Continue / Claimed Action Button */}
+                {/* Complete / Claimed Action Button */}
                 <button
                   id={`continue-quest-${quest.id}`}
                   disabled={isCompleted}
                   onClick={() => {
                     if (!isCompleted) {
-                      onContinueQuest(quest.id);
+                      soundFx.playQuestComplete();
+                      if (onCompleteQuest) {
+                        onCompleteQuest(quest.id);
+                      } else {
+                        onContinueQuest(quest.id);
+                      }
                     }
                   }}
                   className={`
-                    px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1 shrink-0
+                    px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-1.5 shrink-0
                     ${isCompleted 
                       ? 'bg-emerald-950/40 text-emerald-400/80 border-emerald-600/30 cursor-default opacity-85 select-none pointer-events-none' 
-                      : `${style.btnBg} cursor-pointer hover:scale-105 active:scale-95`}
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.4)] cursor-pointer hover:scale-105 active:scale-95'}
                   `}
                 >
                   {isCompleted ? (
@@ -262,8 +267,8 @@ export const ActiveQuests: React.FC<ActiveQuestsProps> = ({
                     </>
                   ) : (
                     <>
-                      <span>Continue</span>
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-200" />
+                      <span>Complete (+{quest.xpReward} XP, +{quest.goldReward} Gold)</span>
                     </>
                   )}
                 </button>

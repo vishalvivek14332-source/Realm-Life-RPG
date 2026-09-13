@@ -536,24 +536,51 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
 
             {/* Rest & Meditation Recovery Callout */}
             {onRest && (
-              <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 via-[#100828] to-cyan-950/40 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+              <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg transition-all ${
+                profile.canRestToday === false
+                  ? 'bg-gradient-to-r from-[#11091d]/80 via-[#0a0614] to-[#0d091a]/80 border-purple-950/40 opacity-80'
+                  : 'bg-gradient-to-r from-purple-950/60 via-[#100828] to-cyan-950/40 border-purple-500/40'
+              }`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-900/60 border border-purple-400/60 flex items-center justify-center text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shadow-[0_0_10px_rgba(168,85,247,0.4)] ${
+                    profile.canRestToday === false
+                      ? 'bg-slate-900/60 border-slate-700/40 text-slate-500'
+                      : 'bg-purple-900/60 border-purple-400/60 text-purple-300'
+                  }`}>
                     <SunMedium className="w-5 h-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-white tracking-wide">Campfire Rest & Meditation</h4>
-                    <p className="text-[11px] text-slate-300">Take a conscious pause to replenish +35 Energy and +20 Health.</p>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-white tracking-wide">Campfire Rest & Meditation</h4>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                        profile.canRestToday === false
+                          ? 'bg-purple-950/60 text-slate-400 border border-purple-900/40'
+                          : 'bg-purple-900/60 text-purple-300 border border-purple-500/40'
+                      }`}>
+                        {profile.canRestToday === false ? 'Used (1/1)' : 'Available (1/1)'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      {profile.canRestToday === false
+                        ? 'Embers have cooled for today. You can rest once per day! Consume health & focus potions from your inventory.'
+                        : 'Take a conscious pause to replenish +35 Energy and +20 Health (once per day).'}
+                    </p>
                   </div>
                 </div>
                 <button
+                  disabled={profile.canRestToday === false}
                   onClick={() => {
+                    if (profile.canRestToday === false) return;
                     soundFx.playLevelUp();
                     onRest();
                   }}
-                  className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md hover:scale-105 transition-all cursor-pointer shrink-0"
+                  className={`px-4 py-1.5 rounded-xl font-bold text-xs shadow-md transition-all shrink-0 ${
+                    profile.canRestToday === false
+                      ? 'bg-[#1a1426] border border-purple-950/50 text-slate-500 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white hover:scale-105 cursor-pointer'
+                  }`}
                 >
-                  Rest Now
+                  {profile.canRestToday === false ? 'Embers Cooled' : 'Rest Now'}
                 </button>
               </div>
             )}
