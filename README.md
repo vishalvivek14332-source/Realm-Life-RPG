@@ -4,6 +4,12 @@ An immersive, cinematic medieval dark-fantasy RPG life gamification dashboard de
 
 ---
 
+## 🌐 Live Application & Links
+
+- **🚀 Live Web App (Render)**: [https://realm-life-rpg.onrender.com](https://realm-life-rpg.onrender.com)
+
+---
+
 ## 🌟 Features
 
 - **Authoritative RPG Progression Engine**: Non-linear level progression calculated server-side using the formula:
@@ -101,61 +107,84 @@ Prisma manages 11 relational models with strict foreign keys, cascade deletes, a
 
 ## ⚙️ Environment Variables
 
-### Backend Configuration (`backend/.env`)
+### Supabase & Server Configuration (`.env` / `backend/.env`)
 
 ```env
 # Supabase PostgreSQL Connection Strings
-DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@[YOUR-HOST]:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres:[YOUR-PASSWORD]@[YOUR-HOST]:5432/postgres"
+# Port 6543 = PgBouncer Transaction Pooler (Requires pgbouncer=true and sslmode=require)
+DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
+
+# Port 5432 = Session Pooler / Direct Connection (Requires sslmode=require)
+DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
 
 # Security & Server
 JWT_SECRET="your-super-secret-jwt-key"
 PORT=5000
+NODE_ENV="production"
 CLIENT_URL="http://localhost:3000"
 ```
 
-A template with placeholders is located at `backend/.env.example`.
+> [!NOTE]
+> Prisma Client automatically sanitizes and ensures `pgbouncer=true` and `sslmode=require` flags at runtime to eliminate prepared statement caching errors on PgBouncer.
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started & Local Development
 
 ### 1. Prerequisites
 - **Node.js** v18+
 - **npm** or **bun**
-- **Supabase PostgreSQL** database (or local PostgreSQL instance)
+- **Supabase PostgreSQL** instance
 
-### 2. Backend Setup
+### 2. Quick Unified Local Launch
 
 ```bash
-# Navigate to backend directory
+# Install root and backend dependencies
+npm install
+npm --prefix backend install
+
+# Generate Prisma client and compile
+npm run build
+
+# Start unified application on http://localhost:5000
+npm start
+```
+
+### 3. Separate Frontend & Backend Development
+
+```bash
+# Terminal 1: Start Express API server (port 5000)
 cd backend
+npm run dev
 
-# Install dependencies
-npm install
-
-# Copy environment template and configure your database credentials
-cp .env.example .env
-
-# Push schema to database
-npx prisma db push
-
-# Seed items and achievements catalog
-npm run prisma:seed
-
-# Start backend development server (Runs on http://localhost:5000)
+# Terminal 2: Start Vite client dev server (port 3000)
 npm run dev
 ```
 
-### 3. Frontend Setup
+---
 
-```bash
-# In project root directory
-npm install
+## ☁️ Render Production Deployment
 
-# Start Vite frontend development server (Runs on http://localhost:3000)
-npm run dev
-```
+The project is configured to build and deploy as a single, unified service on Render using the included `render.yaml` blueprint:
+
+1. Connect your repository on [dashboard.render.com](https://dashboard.render.com).
+2. Create a **Web Service** with the following settings:
+   - **Environment**: `Node`
+   - **Build Command**:
+     ```bash
+     npm install --include=dev && npm --prefix backend install --include=dev && npm --prefix backend run prisma:generate && npm run build
+     ```
+   - **Start Command**:
+     ```bash
+     npm start
+     ```
+3. Set the Environment Variables:
+   - `NODE_ENV` = `production`
+   - `PORT` = `10000`
+   - `DATABASE_URL` = *(Your Supabase Transaction Pooler URL with `?pgbouncer=true&sslmode=require`)*
+   - `DIRECT_URL` = *(Your Supabase Session Pooler URL with `?sslmode=require`)*
+   - `JWT_SECRET` = *(Your secure random token key)*
+4. The Express server serves both the production React bundle (`dist/`) and all `/api/*` endpoints from the same URL with seamless SPA fallback routing.
 
 ---
 
