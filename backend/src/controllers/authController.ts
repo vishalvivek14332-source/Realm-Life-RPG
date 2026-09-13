@@ -37,12 +37,15 @@ export class AuthController {
         return;
       }
 
+      const cleanUsername = username.trim();
+      const cleanEmail = email.toLowerCase().trim();
+
       // Check duplicates
       const existing = await prisma.user.findFirst({
         where: {
           OR: [
-            { email: email.toLowerCase().trim() },
-            { username: username.trim() }
+            { email: cleanEmail },
+            { username: cleanUsername }
           ]
         }
       });
@@ -50,7 +53,7 @@ export class AuthController {
       if (existing) {
         res.status(409).json({
           success: false,
-          message: existing.email.toLowerCase() === email.toLowerCase().trim()
+          message: existing.email.toLowerCase() === cleanEmail
             ? 'An account with this email already exists.'
             : 'This username is already claimed in the Realm.',
           errorCode: 'USER_ALREADY_EXISTS'
@@ -60,164 +63,165 @@ export class AuthController {
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create user, character, streak, starter items, starter quests atomically
-      const result = await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: {
-            username: username.trim(),
-            email: email.toLowerCase().trim(),
-            passwordHash
-          }
-        });
-
-        const character = await tx.character.create({
-          data: {
-            userId: user.id,
-            level: 1,
-            xp: 0,
-            gold: 50,
-            health: 100,
-            energy: 100,
-            strength: 18,
-            intellect: 16,
-            wisdom: 14,
-            discipline: 20,
-            vitality: 17
-          }
-        });
-
-        await tx.streak.create({
-          data: {
-            userId: user.id,
-            currentStreak: 1,
-            longestStreak: 1,
-            lastCheckIn: new Date()
-          }
-        });
-
-        // Seed starter starter quests for the player
-        const starterQuests = [
-          {
-            userId: user.id,
-            title: 'Deep Work Session',
-            category: 'STUDY',
-            difficulty: 'Medium',
-            attribute: 'intellect',
-            description: 'Focus for 30 minutes on a meaningful task without distractions.',
-            xpReward: 250,
-            goldReward: 40,
-            energyCost: 15,
-            progress: 0,
-            estimatedMinutes: 30,
-            currentMinutes: 0,
-            frequency: 'Daily',
-            quote: '“Focus is the key to extraordinary results.”',
-            iconName: 'book',
-            status: 'ACTIVE'
-          },
-          {
-            userId: user.id,
-            title: 'Morning Exercise',
-            category: 'HEALTH',
-            difficulty: 'Medium',
-            attribute: 'strength',
-            description: 'Complete 20 min workout routine.',
-            xpReward: 300,
-            goldReward: 50,
-            energyCost: 20,
-            progress: 0,
-            estimatedMinutes: 20,
-            currentMinutes: 0,
-            frequency: 'Daily',
-            quote: '“Strength doesn’t come from what you can do, but overcoming what you once thought you couldn’t.”',
-            iconName: 'dumbbell',
-            status: 'ACTIVE'
-          },
-          {
-            userId: user.id,
-            title: 'Read a Book',
-            category: 'PERSONAL',
-            difficulty: 'Easy',
-            attribute: 'wisdom',
-            description: 'Read 20 pages of non-fiction or philosophy.',
-            xpReward: 200,
-            goldReward: 30,
-            energyCost: 10,
-            progress: 0,
-            estimatedMinutes: 25,
-            currentMinutes: 0,
-            frequency: 'Daily',
-            quote: '“A reader lives a thousand lives before he dies.”',
-            iconName: 'scroll',
-            status: 'ACTIVE'
-          },
-          {
-            userId: user.id,
-            title: 'Plan Your Day',
-            category: 'DISCIPLINE',
-            difficulty: 'Easy',
-            attribute: 'discipline',
-            description: 'Define top 3 priorities before opening social media.',
-            xpReward: 150,
-            goldReward: 25,
-            energyCost: 10,
-            progress: 0,
-            estimatedMinutes: 10,
-            currentMinutes: 0,
-            frequency: 'Daily',
-            quote: '“Failing to plan is planning to fail.”',
-            iconName: 'shield',
-            status: 'ACTIVE'
-          }
-        ];
-
-        for (const q of starterQuests) {
-          await tx.quest.create({ data: q });
+      // Seed starter starter quests for the player
+      const starterQuests = [
+        {
+          title: 'Deep Work Session',
+          category: 'STUDY',
+          difficulty: 'Medium',
+          attribute: 'intellect',
+          description: 'Focus for 30 minutes on a meaningful task without distractions.',
+          xpReward: 250,
+          goldReward: 40,
+          energyCost: 15,
+          progress: 0,
+          estimatedMinutes: 30,
+          currentMinutes: 0,
+          frequency: 'Daily',
+          quote: '“Focus is the key to extraordinary results.”',
+          iconName: 'book',
+          status: 'ACTIVE'
+        },
+        {
+          title: 'Morning Exercise',
+          category: 'HEALTH',
+          difficulty: 'Medium',
+          attribute: 'strength',
+          description: 'Complete 20 min workout routine.',
+          xpReward: 300,
+          goldReward: 50,
+          energyCost: 20,
+          progress: 0,
+          estimatedMinutes: 20,
+          currentMinutes: 0,
+          frequency: 'Daily',
+          quote: '“Strength doesn’t come from what you can do, but overcoming what you once thought you couldn’t.”',
+          iconName: 'dumbbell',
+          status: 'ACTIVE'
+        },
+        {
+          title: 'Read a Book',
+          category: 'PERSONAL',
+          difficulty: 'Easy',
+          attribute: 'wisdom',
+          description: 'Read 20 pages of non-fiction or philosophy.',
+          xpReward: 200,
+          goldReward: 30,
+          energyCost: 10,
+          progress: 0,
+          estimatedMinutes: 25,
+          currentMinutes: 0,
+          frequency: 'Daily',
+          quote: '“A reader lives a thousand lives before he dies.”',
+          iconName: 'scroll',
+          status: 'ACTIVE'
+        },
+        {
+          title: 'Plan Your Day',
+          category: 'DISCIPLINE',
+          difficulty: 'Easy',
+          attribute: 'discipline',
+          description: 'Define top 3 priorities before opening social media.',
+          xpReward: 150,
+          goldReward: 25,
+          energyCost: 10,
+          progress: 0,
+          estimatedMinutes: 10,
+          currentMinutes: 0,
+          frequency: 'Daily',
+          quote: '“Failing to plan is planning to fail.”',
+          iconName: 'shield',
+          status: 'ACTIVE'
         }
+      ];
 
-        // Give starter inventory items
-        const starterItemIds = [
-          { id: 'trackers_blade_item', qty: 1, eq: true },
-          { id: 'mindful_cloak', qty: 1, eq: true },
-          { id: 'health_potion', qty: 2, eq: false },
-          { id: 'energy_bar', qty: 2, eq: false },
-          { id: 'focus_potion', qty: 1, eq: false }
-        ];
+      // Give starter inventory items
+      const starterItemDefs = [
+        { itemId: 'trackers_blade_item', quantity: 1, equipped: true },
+        { itemId: 'mindful_cloak', quantity: 1, equipped: true },
+        { itemId: 'health_potion', quantity: 2, equipped: false },
+        { itemId: 'energy_bar', quantity: 2, equipped: false },
+        { itemId: 'focus_potion', quantity: 1, equipped: false }
+      ];
 
-        for (const itm of starterItemIds) {
-          const itemExists = await tx.inventoryItem.findUnique({ where: { id: itm.id } });
-          if (itemExists) {
-            await tx.userInventory.create({
-              data: {
-                userId: user.id,
-                itemId: itm.id,
-                quantity: itm.qty,
-                equipped: itm.eq
-              }
-            });
-          }
+      const existingItems = await prisma.inventoryItem.findMany({
+        where: { id: { in: starterItemDefs.map(i => i.itemId) } },
+        select: { id: true }
+      });
+      const existingItemIds = new Set(existingItems.map(i => i.id));
+      const validInventoryCreates = starterItemDefs.filter(itm => existingItemIds.has(itm.itemId));
+
+      // Create user, character, streak, starter items, starter quests atomically via single nested query
+      const user = await prisma.user.create({
+        data: {
+          username: cleanUsername,
+          email: cleanEmail,
+          passwordHash,
+          character: {
+            create: {
+              level: 1,
+              xp: 0,
+              gold: 50,
+              health: 100,
+              energy: 100,
+              strength: 18,
+              intellect: 16,
+              wisdom: 14,
+              discipline: 20,
+              vitality: 17
+            }
+          },
+          streak: {
+            create: {
+              currentStreak: 1,
+              longestStreak: 1,
+              lastCheckIn: new Date()
+            }
+          },
+          quests: {
+            create: starterQuests
+          },
+          activityLogs: {
+            create: {
+              type: 'level_up',
+              title: 'Inscribed in the Realm',
+              description: 'Initiate registered with Novice Wanderer title.',
+              xp: 0,
+              gold: 50
+            }
+          },
+          ...(validInventoryCreates.length > 0
+            ? { userInventories: { create: validInventoryCreates } }
+            : {})
+        },
+        include: {
+          character: true,
+          streak: true
         }
-
-        // Starter activity log
-        await tx.activityLog.create({
-          data: {
-            userId: user.id,
-            type: 'level_up',
-            title: 'Inscribed in the Realm',
-            description: 'Initiate registered with Novice Wanderer title.',
-            xp: 0,
-            gold: 50
-          }
-        });
-
-        return { user, character };
       });
 
-      const token = generateToken(result.user.id);
+      const token = generateToken(user.id);
 
-      const maxHp = ProgressionService.calculateMaxHealth(result.character.vitality);
-      const maxEnergy = ProgressionService.calculateMaxEnergy(result.character.vitality, result.character.discipline);
-      const requiredXp = ProgressionService.getRequiredXpForLevel(result.character.level);
+      const character = user.character || {
+        id: '',
+        userId: user.id,
+        level: 1,
+        xp: 0,
+        gold: 50,
+        health: 100,
+        energy: 100,
+        strength: 18,
+        intellect: 16,
+        wisdom: 14,
+        discipline: 20,
+        vitality: 17,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const maxHp = ProgressionService.calculateMaxHealth(character.vitality);
+      const maxEnergy = ProgressionService.calculateMaxEnergy(character.vitality, character.discipline);
+      const requiredXp = ProgressionService.getRequiredXpForLevel(character.level);
 
       res.status(201).json({
         success: true,
@@ -225,12 +229,12 @@ export class AuthController {
         data: {
           token,
           user: {
-            id: result.user.id,
-            username: result.user.username,
-            email: result.user.email
+            id: user.id,
+            username: user.username,
+            email: user.email
           },
           character: {
-            ...result.character,
+            ...character,
             maxHealth: maxHp,
             maxEnergy,
             requiredXp

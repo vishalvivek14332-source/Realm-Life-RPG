@@ -460,7 +460,7 @@ export class QuestController {
           completion,
           unlockedAchievements
         };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       // 20. Return complete updated character state and rewards
       res.status(200).json({

@@ -140,7 +140,7 @@ export class StreakService {
           }
         });
       }
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     return {
       currentStreak: newStreak,

@@ -147,7 +147,7 @@ export class InventoryController {
         });
 
         return { updatedChar, userInv };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       res.status(200).json({
         success: true,
@@ -295,7 +295,7 @@ export class InventoryController {
         });
 
         return { updatedChar, updatedInv };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       res.status(200).json({
         success: true,
@@ -472,7 +472,7 @@ export class InventoryController {
         });
 
         return { updatedChar, updatedInv };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       res.status(200).json({
         success: true,
