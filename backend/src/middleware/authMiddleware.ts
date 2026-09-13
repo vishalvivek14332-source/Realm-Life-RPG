@@ -34,7 +34,17 @@ export const requireAuth = async (
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = verifyToken(token);
+    let decoded: { userId: string };
+    try {
+      decoded = verifyToken(token);
+    } catch (tokenErr) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid or expired session token.',
+        errorCode: 'INVALID_TOKEN'
+      });
+      return;
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -54,10 +64,6 @@ export const requireAuth = async (
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({
-      success: false,
-      message: 'Invalid or expired session token.',
-      errorCode: 'INVALID_TOKEN'
-    });
+    next(error);
   }
 };

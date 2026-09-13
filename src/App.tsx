@@ -181,6 +181,7 @@ export default function App() {
       const meRes = await authApi.getMe();
       if (meRes.success && meRes.data) {
         setIsAuthenticated(true);
+        setIsAuthModalOpen(false);
         setCurrentUser(meRes.data.user);
         updateProfileAndStats(meRes.data.character, meRes.data.user, meRes.data.streak);
       }
@@ -220,10 +221,10 @@ export default function App() {
         setActivities(actRes.data);
       }
     } catch (err: any) {
-      if (err.status === 401) {
+      console.warn('Backend loadGameData error:', err?.message);
+      if (err?.status === 401 && err?.errorCode === 'INVALID_TOKEN') {
         removeToken();
         setIsAuthenticated(false);
-        setIsAuthModalOpen(true);
       }
     }
   }, [updateProfileAndStats]);
@@ -1002,9 +1003,7 @@ export default function App() {
       {/* Authentication Gateway Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => {
-          if (isAuthenticated) setIsAuthModalOpen(false);
-        }}
+        onClose={() => setIsAuthModalOpen(false)}
         onSuccess={handleAuthSuccess}
       />
     </div>
