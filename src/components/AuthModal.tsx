@@ -17,6 +17,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setUsername('');
+      setEmail('');
+      setPassword('');
+      setError(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,8 +254,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </button>
         </form>
 
-        {/* Quick Demo Hero Button */}
-        <div className="mt-4 pt-4 border-t border-purple-950/60">
+        {/* Demo Hero Credentials & Quick Login */}
+        <div className="mt-4 pt-4 border-t border-purple-950/60 space-y-2">
           <button
             type="button"
             onClick={handleQuickDemo}
@@ -254,23 +263,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             className="w-full py-2.5 px-4 rounded-xl bg-amber-950/30 hover:bg-amber-950/60 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
           >
             <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-            <span>Instant Demo Adventurer (SHADOW)</span>
+            <span>Autofill Demo Credentials & Enter (SHADOW)</span>
           </button>
-
-          {onClose && (
-            <div className="mt-3 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playClick();
-                  onClose();
-                }}
-                className="text-[11px] text-purple-300/70 hover:text-purple-200 underline underline-offset-2 transition-colors cursor-pointer"
-              >
-                Continue as Guest (Explore Dashboard)
-              </button>
-            </div>
-          )}
+          <p className="text-[10.5px] text-center text-slate-400 leading-tight">
+            Demo Hero: <span className="text-purple-300 font-mono">shadow@realm.rpg</span> / <span className="text-amber-300 font-mono">realmPassword123</span>
+          </p>
         </div>
       </div>
     </div>

@@ -1017,8 +1017,8 @@ export default function App() {
 
       {/* Authentication Gateway Modal */}
       <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        isOpen={!isAuthenticated || isAuthModalOpen}
+        onClose={isAuthenticated ? () => setIsAuthModalOpen(false) : undefined}
         onSuccess={handleAuthSuccess}
       />
     </div>
