@@ -1,6 +1,46 @@
 import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Ensure backend .env and root .env are loaded before Prisma initialization
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config();
+
+function sanitizePgBouncerUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    // Enforce pgbouncer=true to disable prepared statement cache on transaction poolers
+    parsed.searchParams.set('pgbouncer', 'true');
+    // Enforce sslmode=require for secure Supabase cloud connections
+    if (!parsed.searchParams.has('sslmode')) {
+      parsed.searchParams.set('sslmode', 'require');
+    }
+    return parsed.toString();
+  } catch {
+    let sanitized = rawUrl;
+    if (!sanitized.includes('pgbouncer=true')) {
+      sanitized += (sanitized.includes('?') ? '&' : '?') + 'pgbouncer=true';
+    }
+    if (!sanitized.includes('sslmode=')) {
+      sanitized += (sanitized.includes('?') ? '&' : '?') + 'sslmode=require';
+    }
+    return sanitized;
+  }
+}
+
+const dbUrl = sanitizePgBouncerUrl(process.env.DATABASE_URL || '');
+if (dbUrl) {
+  process.env.DATABASE_URL = dbUrl;
+}
 
 export const prisma = new PrismaClient({
+  datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
   log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error']
 });
 
