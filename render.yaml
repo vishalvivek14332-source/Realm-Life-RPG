@@ -3,7 +3,7 @@ services:
     name: realm-rpg-dashboard
     runtime: node
     plan: free
-    buildCommand: npm install && npm --prefix backend install && npm --prefix backend run prisma:generate && npm run build
+    buildCommand: npm install --include=dev && npm --prefix backend install --include=dev && npm --prefix backend run prisma:generate && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV

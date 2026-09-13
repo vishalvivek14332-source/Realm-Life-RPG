@@ -2,7 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt.js';
 import prisma from '../prisma.js';
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest<
+  P = any,
+  ResBody = any,
+  ReqBody = any,
+  ReqQuery = any,
+  Locals extends Record<string, any> = Record<string, any>
+> extends Request<P, ResBody, ReqBody, ReqQuery, Locals> {
   userId?: string;
   user?: {
     id: string;
