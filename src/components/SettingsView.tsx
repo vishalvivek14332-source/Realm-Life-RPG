@@ -18,7 +18,8 @@ import {
   Check, 
   Sparkles,
   Settings as SettingsIcon,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import { soundFx } from '../sound';
 
@@ -725,12 +726,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {onLogout && (
                 <button
                   id="btn-sign-out"
+                  type="button"
                   onClick={() => {
                     soundFx.playClick();
                     onLogout();
                   }}
-                  className="w-full py-2 px-3 rounded-xl border border-rose-600/50 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-sm"
+                  className="w-full py-2.5 px-3 rounded-xl border border-rose-600/50 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 transition-all flex items-center justify-center gap-2 text-xs font-bold shadow-sm cursor-pointer"
                 >
+                  <LogOut className="w-3.5 h-3.5" />
                   <span>Depart Realm (Sign Out)</span>
                 </button>
               )}

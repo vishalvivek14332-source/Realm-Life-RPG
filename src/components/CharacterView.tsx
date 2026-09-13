@@ -24,7 +24,8 @@ import {
   Trophy, 
   SunMedium,
   Check,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 import { soundFx } from '../sound';
 import heroShadowBanner from '../assets/images/hero_shadow_banner_1789201471184.jpg';
@@ -50,6 +51,8 @@ interface CharacterViewProps {
   onOpenInventory: () => void;
   onOpenAchievements: () => void;
   onRest?: () => void;
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
 }
 
 export const CharacterView: React.FC<CharacterViewProps> = ({
@@ -64,7 +67,9 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
   showToast,
   onOpenInventory,
   onOpenAchievements,
-  onRest
+  onRest,
+  isAuthenticated,
+  onLogout
 }) => {
   // Character states
   const [characterName, setCharacterName] = useState(profile.name);
@@ -144,12 +149,27 @@ export const CharacterView: React.FC<CharacterViewProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-[#080415] via-transparent to-[#080415]/40" />
             </div>
 
-            {/* Top Left Quote with Pointer Arrow */}
+            {/* Top Left Quote with Pointer Arrow & Account Action */}
             <div className="relative z-10 flex items-center justify-between">
               <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300/90 font-serif tracking-wider">
                 <span className="text-slate-400">↳</span>
                 <span className="tracking-wide">“SAME PERSON. HIGHER STANDARDS.”</span>
               </div>
+              {onLogout && isAuthenticated && (
+                <button
+                  id="character-logout-button"
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    onLogout();
+                  }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-300 hover:text-white bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/50 hover:border-rose-500 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  title="Depart Realm (Log Out)"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Depart Realm</span>
+                </button>
+              )}
             </div>
 
             {/* Right-Aligned Character Content Area */}

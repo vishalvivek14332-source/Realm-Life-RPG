@@ -293,10 +293,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
               <div className="text-left hidden sm:block leading-tight">
                 <div className="text-xs font-black text-white font-cinzel tracking-wider group-hover:text-purple-300 transition-colors">
-                  {profile.name}
+                  {isAuthenticated ? (profile.name || 'Hero') : 'Guest Wanderer'}
                 </div>
                 <div className="text-[9px] font-semibold text-purple-300">
-                  Lv. {profile.level}
+                  {isAuthenticated ? `Lv. ${profile.level}` : 'Sign In'}
                 </div>
               </div>
             </button>

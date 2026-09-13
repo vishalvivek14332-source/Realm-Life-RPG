@@ -29,6 +29,27 @@ export const initialProfile: CharacterProfile = {
   canRestToday: true
 };
 
+export const guestProfile: CharacterProfile = {
+  name: 'Guest Wanderer',
+  title: 'Novice Wanderer',
+  level: 1,
+  health: 100,
+  maxHealth: 100,
+  energy: 100,
+  maxEnergy: 100,
+  currentXP: 0,
+  maxXP: 100,
+  gold: 0,
+  totalXP: 0,
+  streakDays: 0,
+  class: 'Novice Initiate',
+  equippedItems: [],
+  unlockedTitles: ['Novice Wanderer'],
+  unlockedThemes: ['theme-default'],
+  currentTheme: 'theme-default',
+  canRestToday: true
+};
+
 export const initialAttributes: AttributeStat[] = [
   {
     id: 'strength',

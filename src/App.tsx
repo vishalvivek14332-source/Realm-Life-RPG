@@ -24,13 +24,14 @@ import { QuestRewardModal } from './components/QuestRewardModal';
 import { AuthModal } from './components/AuthModal';
 import { 
   initialProfile, 
+  guestProfile,
   initialAttributes, 
   initialQuests, 
   initialRecentActivity,
   initialInventory,
   initialAchievements
 } from './data';
-import { Quest, AttributeType } from './types';
+import { Quest, AttributeType, CharacterProfile } from './types';
 import { soundFx } from './sound';
 import { Sparkles } from 'lucide-react';
 import {
@@ -51,8 +52,8 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(!getToken());
   const [currentUser, setCurrentUser] = useState<any>(null);
 
-  // Core game state
-  const [profile, setProfile] = useState(initialProfile);
+  // Core game state - default to guestProfile if unauthenticated, otherwise initialProfile until remote data loads
+  const [profile, setProfile] = useState<CharacterProfile>(getToken() ? initialProfile : guestProfile);
   const [attributes, setAttributes] = useState(initialAttributes);
   const [quests, setQuests] = useState<Quest[]>(initialQuests);
   const [activities, setActivities] = useState(initialRecentActivity);
@@ -225,6 +226,8 @@ export default function App() {
       if (err?.status === 401 && err?.errorCode === 'INVALID_TOKEN') {
         removeToken();
         setIsAuthenticated(false);
+        setCurrentUser(null);
+        setProfile(guestProfile);
       }
     }
   }, [updateProfileAndStats]);
@@ -707,6 +710,13 @@ export default function App() {
   const handleLogout = () => {
     authApi.logout();
     setIsAuthenticated(false);
+    setCurrentUser(null);
+    setProfile(guestProfile);
+    setAttributes(initialAttributes);
+    setQuests(initialQuests);
+    setInventory(initialInventory);
+    setAchievements(initialAchievements);
+    setActivities(initialRecentActivity);
     setIsAuthModalOpen(true);
     showToast("Departed the Realm. Safe travels, adventurer!");
   };
@@ -769,6 +779,9 @@ export default function App() {
         questCount={activeQuests.length}
         mobileOpen={mobileNavOpen}
         setMobileOpen={setMobileNavOpen}
+        isAuthenticated={isAuthenticated}
+        onLogout={handleLogout}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -844,6 +857,8 @@ export default function App() {
               onOpenInventory={() => setCurrentTab('inventory')}
               onOpenAchievements={() => setCurrentTab('achievements')}
               onRest={handleRest}
+              isAuthenticated={isAuthenticated}
+              onLogout={handleLogout}
             />
           ) : currentTab === 'history' ? (
             <HistoryView

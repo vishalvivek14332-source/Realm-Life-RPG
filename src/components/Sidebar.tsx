@@ -8,7 +8,9 @@ import {
   Package, 
   Trophy, 
   Settings,
-  X
+  X,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { soundFx } from '../sound';
 import parchmentLanternImg from '../assets/images/parchment_lantern_1789201037103.jpg';
@@ -24,6 +26,9 @@ interface SidebarProps {
   questCount: number;
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
+  isAuthenticated?: boolean;
+  onLogout?: () => void;
+  onOpenAuth?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -32,7 +37,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   openAddQuest,
   questCount,
   mobileOpen,
-  setMobileOpen
+  setMobileOpen,
+  isAuthenticated,
+  onLogout,
+  onOpenAuth
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -145,6 +153,51 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               );
             })}
+
+            {/* Session Action: Log Out or Sign In */}
+            <div className="pt-2 mt-2 border-t border-purple-900/40">
+              {isAuthenticated ? (
+                <button
+                  id="sidebar-logout-button"
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setMobileOpen(false);
+                    onLogout?.();
+                  }}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-rose-400 hover:text-rose-100 hover:bg-rose-950/40 border border-rose-900/40 hover:border-rose-700/60 transition-all duration-200 group cursor-pointer shadow-sm"
+                  aria-label="Depart Realm (Log Out)"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogOut className="w-4 h-4 transition-transform group-hover:scale-110 text-rose-400 group-hover:text-rose-300" />
+                    <span className="tracking-wide">Log Out</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold text-rose-400/80 group-hover:text-rose-200">
+                    Depart
+                  </span>
+                </button>
+              ) : (
+                <button
+                  id="sidebar-login-button"
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setMobileOpen(false);
+                    onOpenAuth?.();
+                  }}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold text-purple-300 hover:text-white bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/50 hover:border-purple-500 transition-all duration-200 group cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.25)]"
+                  aria-label="Enter Realm (Sign In)"
+                >
+                  <div className="flex items-center gap-3">
+                    <LogIn className="w-4 h-4 transition-transform group-hover:scale-110 text-purple-300 group-hover:text-purple-200" />
+                    <span className="tracking-wide">Sign In</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-bold text-purple-300/80 group-hover:text-purple-200">
+                    Enter
+                  </span>
+                </button>
+              )}
+            </div>
           </nav>
         </div>
 

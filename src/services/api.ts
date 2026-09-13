@@ -53,6 +53,13 @@ export const authApi = {
     request('/auth/me', { method: 'GET' }),
   logout: () => {
     removeToken();
+    try {
+      localStorage.removeItem('realm_user');
+      localStorage.removeItem('realm_character');
+      sessionStorage.clear();
+    } catch (e) {
+      // ignore storage access restriction
+    }
   }
 };
 
