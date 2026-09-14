@@ -205,7 +205,7 @@ All protected endpoints require an `Authorization: Bearer <token>` header.
 - `GET /api/quests` — List player's quests
 - `POST /api/quests` — Inscribe a new quest
 - `GET /api/quests/:id` — View quest details
-- `PUT /api/quests/:id` — Update quest details (active only)
+- `PUT /api/quests/:id` — Update quest details (active)
 - `DELETE /api/quests/:id` — Delete quest from active roster
 - `POST /api/quests/:id/complete` — **Authoritative completion engine**: calculates rewards, awards XP/Gold, scales attributes, tests level-ups, evaluates achievements, and rolls loot drops atomically
 
